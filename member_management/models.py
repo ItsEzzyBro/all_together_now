@@ -59,6 +59,24 @@ class Family(models.Model):
 class Vistor(models.Model):
     first_name = models.CharField(max_length = 100)
     last_name = models.CharField(max_length = 100)
+    date_of_birth = models.DateField(blank = False, null = True, verbose_name = "Date of Birth", help_text="Provide the member's date of birth (MM/DD/YYYY).")
+    GENDER = [
+        ("M", "Male"),
+        ("F", "Female")
+    ]
+    gender = models.CharField(max_length = 1, choices = GENDER, blank = True, null = True)
+    phone_number = models.CharField(max_length = 25, blank = True, null = True)
+    email = models.EmailField(unique = True, blank = True, null = True)
+
+    def calculate_age(self):
+        today = date.today()
+        age_calculated = relativedelta(today, self.date_of_birth)
+
+        return age_calculated.years
+    
+    @property
+    def age(self):
+        return self.calculate_age()
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
