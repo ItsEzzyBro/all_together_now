@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
 
-class GroupsConfig(AppConfig):
+class MinistryConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
-    name = "groups"
+    name = "ministry"

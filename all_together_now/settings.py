@@ -39,7 +39,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "member_management",
-    "groups",
+    "ministry"
     "attendance",
 ]
 
