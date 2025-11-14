@@ -38,8 +38,9 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "members",
-    "pages"
+    "member_management",
+    "groups",
+    "attendance",
 ]
 
 MIDDLEWARE = [
@@ -125,4 +126,4 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-LOGIN_REDIRECT_URL = "/home/"
+LOGIN_REDIRECT_URL = 'admin-dashboard/'

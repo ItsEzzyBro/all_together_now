@@ -1,0 +1,14 @@
+{% extends "admin/base.html" %}
+
+{% block title %}
+  {% if subtitle %} {{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('All Together Now') }}
+{% endblock %}
+
+{% block branding %}
+<h1 id="site-name">All Together Now: A Church Membership Database</h1>
+
+{% if user.is_anonymous %}
+  {% include "admin/color_theme_toggle.html" %}
+{% endif %}
+
+{% endblock %}
