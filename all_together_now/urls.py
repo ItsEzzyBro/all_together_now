@@ -20,6 +20,10 @@ from django.urls import include, path
 from django.contrib.auth import views as auth_views
 from django.views.generic import TemplateView
 
+admin.site.site_header = "All Together Now: A Church Membership Database"
+admin.site.index_title = "Church Administration"
+
+
 urlpatterns = [
     path("", auth_views.LoginView.as_view(template_name = 'admin/login.html'), name = 'login'),
     path("admin-dashboard/", admin.site.urls),
