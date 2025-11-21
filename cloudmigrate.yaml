@@ -59,7 +59,7 @@ substitutions:
   _INSTANCE_NAME: all-together-now
   _CLOUD_SQL_CONNECTION_NAME: ${PROJECT_ID}:${_REGION}:${_INSTANCE_NAME}
   _REGION: us-east4
-  _SERVICE_NAME: polls-service
+  _SERVICE_NAME: my-application-service
   _SECRET_SETTINGS_NAME: django_settings
   _ARTIFACT_REGISTRY: cloud-run-source-deploy
   _IMAGE_NAME: ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY}/${_SERVICE_NAME}

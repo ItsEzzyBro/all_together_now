@@ -3,8 +3,6 @@
 # Python / Virtual Environment
 *.pyc
 __pycache__/
-venv/
-env/
 pip-log.txt
 pip-delete-this-arg.txt
 
@@ -12,9 +10,6 @@ pip-delete-this-arg.txt
 db.sqlite3
 /static_root/
 /media/
-
-# Environment Variables
-.env
 
 # IDE and OS Files
 .DS_Store
