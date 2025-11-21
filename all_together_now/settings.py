@@ -169,7 +169,24 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = "static/"
+# Static files (CSS, JavaScript, Images)
+# [START cloudrun_django_static_config]
+# Define static storage via django-storages[google]
+GS_BUCKET_NAME = env("GS_BUCKET_NAME")
+
+GS_QUERYSTRING_AUTH = False
+GS_DEFAULT_ACL = None 
+
+STATIC_URL = "/static/"
+STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.gcloud.GoogleCloudStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "storages.backends.gcloud.GoogleCloudStorage",
+    },
+}
+# GS_DEFAULT_ACL = "publicRead" # This is disallowed by uniform access
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
