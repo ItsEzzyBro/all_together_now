@@ -83,8 +83,8 @@ WSGI_APPLICATION = "all_together_now.wsgi.application"
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 
-# Old database
-#''' 
+# Old database, to use it comment the new one out
+''' # Add comment here
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
@@ -132,7 +132,7 @@ if os.getenv("USE_CLOUD_SQL_AUTH_PROXY", None):
     DATABASES["default"]["HOST"] = "127.0.0.1"
     DATABASES["default"]["PORT"] = 5432
 
-'''
+#''' # Remove this comment
 
 
 # Password validation
