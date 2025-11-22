@@ -82,22 +82,16 @@ WSGI_APPLICATION = "all_together_now.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-
-# Old database, to use it comment the new one out
-''' # Add comment here
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
-}
-
-# New database still doesn't work don't use this yet
-'''
+USE_SQLITEDB = True
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # Change this to "False" when you are ready for production
-env = environ.Env(DEBUG=(bool, True))
+env = environ.Env(
+    DEBUG=(bool, True),
+    DATABASE_URL=(str, None),
+    SECRET_KEY=(str, 'insecure-dev-key-if-not-set'),
+    GS_BUCKET_NAME=(str, None)
+)
 env_file = os.path.join(BASE_DIR, ".env")
 
 # Attempt to load the Project ID into the environment, safely failing on error.
@@ -108,7 +102,6 @@ except google.auth.exceptions.DefaultCredentialsError:
 
 if os.path.isfile(env_file):
     # Use a local secret file, if provided
-
     env.read_env(env_file)
 
 elif os.environ.get("GOOGLE_CLOUD_PROJECT", None):
@@ -122,17 +115,36 @@ elif os.environ.get("GOOGLE_CLOUD_PROJECT", None):
 
     env.read_env(io.StringIO(payload))
 else:
-    raise Exception("No local .env or GOOGLE_CLOUD_PROJECT detected. No secrets found.")
+    print("WARNING: No local .env or GOOGLE_CLOUD_PROJECT detected. Proceeding assuming environment variables are set or using SQLite fallback.")
 
-# Use django-environ to parse the connection string
-DATABASES = {"default": env.db()}
+if env("DATABASE_URL") and (not USE_SQLITEDB):
+    DATABASES = {"default": env.db()}
 
-# If the flag as been set, configure to use proxy
-if os.getenv("USE_CLOUD_SQL_AUTH_PROXY", None):
-    DATABASES["default"]["HOST"] = "127.0.0.1"
-    DATABASES["default"]["PORT"] = 5432
+    # If the flag as been set, configure to use proxy
+    if os.getenv("USE_CLOUD_SQL_AUTH_PROXY", None):
+        DATABASES["default"]["HOST"] = "127.0.0.1"
+        DATABASES["default"]["PORT"] = 5432
+        print("Adjusted HOST/PORT for Cloud SQL Auth Proxy.")
+    
+else:
+    DATABASES = {} 
 
-#''' # Remove this comment
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
+    print("Using local SQLite fallback configuration.")
+
+'''
+DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
+print("Using local SQLite fallback configuration.")'''
 
 
 # Password validation
