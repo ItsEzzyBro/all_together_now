@@ -21,7 +21,6 @@ class MembersAndMinistries(models.Model):
     ministry = models.ForeignKey(Ministry, on_delete = models.CASCADE)
     role = models.CharField(max_length = 50, choices = [("Member", "Member"), ("Leader", "Leader")], default = "Member")
 
-
     class Meta:
         unique_together = ("member", "ministry")
         verbose_name = "Ministry Membership"
