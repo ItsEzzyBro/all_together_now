@@ -8,7 +8,6 @@ pip-delete-this-arg.txt
 .venv
 
 # Django specific
-db.sqlite3
 /static_root/
 /media/
 
