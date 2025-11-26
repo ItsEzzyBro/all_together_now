@@ -20,19 +20,15 @@ from google.cloud import secretmanager
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-@#5$o1k_jcoasj31cjvkanrix@x9dl)4vljtay@n-vee_t6=j)"
+USE_SQLITEDB = True
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = "django-insecure-@#5$o1k_jcoasj31cjvkanrix@x9dl)4vljtay@n-vee_t6=j)"
 
+ALLOWED_HOSTS = []
 
 # Application definition
 
@@ -82,8 +78,6 @@ WSGI_APPLICATION = "all_together_now.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
-USE_SQLITEDB = True
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # Change this to "False" when you are ready for production
@@ -137,15 +131,6 @@ else:
         }
     }
     print("Using local SQLite fallback configuration.")
-
-'''
-DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
-    }
-print("Using local SQLite fallback configuration.")'''
 
 
 # Password validation
