@@ -23,12 +23,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 USE_SQLITEDB = False
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = "django-insecure-@#5$o1k_jcoasj31cjvkanrix@x9dl)4vljtay@n-vee_t6=j)"
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
+
+# CSRF
+CSRF_FAILURE_VIEW = "all_together_now.views.csrf_failure"
+
+# Proxy
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # Application definition
 
