@@ -23,7 +23,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 USE_SQLITEDB = False
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = "django-insecure-@#5$o1k_jcoasj31cjvkanrix@x9dl)4vljtay@n-vee_t6=j)"

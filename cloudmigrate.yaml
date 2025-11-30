@@ -56,9 +56,9 @@ options:
   dynamicSubstitutions: true
 
 substitutions:
-  _INSTANCE_NAME: all-together-now
+  _INSTANCE_NAME: atn-sql-instance
   _CLOUD_SQL_CONNECTION_NAME: ${PROJECT_ID}:${_REGION}:${_INSTANCE_NAME}
-  _REGION: us-east4
+  _REGION: us-east1
   _SERVICE_NAME: atn-application-service
   _SECRET_SETTINGS_NAME: django_settings
   _ARTIFACT_REGISTRY: cloud-run-source-deploy
