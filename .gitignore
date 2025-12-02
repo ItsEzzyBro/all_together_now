@@ -3,6 +3,7 @@
 # Python / Virtual Environment
 *.pyc
 __pycache__/
+.venv/ 
 venv/
 env/
 pip-log.txt

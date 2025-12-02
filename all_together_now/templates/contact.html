@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Contact{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <h1 class="text-primary fw-bold mb-3">Contact Us</h1>
+  <p class="lead">Have a question or need help? We’d love to hear from you.</p>
+
+  <form class="mt-4">
+    <div class="mb-3">
+      <label class="form-label">Name</label>
+      <input type="text" class="form-control" placeholder="Your name">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Email</label>
+      <input type="email" class="form-control" placeholder="you@example.com">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Message</label>
+      <textarea class="form-control" rows="5" placeholder="Type your message here"></textarea>
+    </div>
+    <button class="btn btn-primary" type="submit">Send Message</button>
+  </form>
+</div>
+{% endblock %}

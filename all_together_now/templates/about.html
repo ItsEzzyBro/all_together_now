@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}About{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4 text-primary fw-bold">About All Together Now</h1>
+    <p class="lead">
+        <strong>All Together Now</strong> is a church membership database designed to help small to medium-sized churches 
+        better manage their congregation. It centralizes member and visitor information, simplifies attendance tracking, 
+        and provides ministry-specific analytics — giving church leaders a clear view of the health and growth of their community.
+    </p>
+
+    <hr class="my-4">
+
+    <h3 class="text-secondary">Our Purpose</h3>
+    <p>
+        Many churches struggle to keep track of members, visitors, and ministries using scattered records or manual systems.  
+        <em>All Together Now</em> was built to make this process simple, structured, and secure — enabling church administrators 
+        and ministry leaders to:
+    </p>
+    <ul>
+        <li>Add, edit, or remove member and visitor records easily.</li>
+        <li>Group members into ministries and manage leadership roles.</li>
+        <li>Track attendance for Sunday services and ministry meetings using QR codes.</li>
+        <li>Generate and view attendance analytics to monitor participation and growth.</li>
+        <li>Follow up with new visitors through connection cards routed to the appropriate ministry.</li>
+    </ul>
+
+    <hr class="my-4">
+
+    <h3 class="text-secondary">User Roles</h3>
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title text-primary">Admin</h5>
+                    <p class="card-text">
+                        Admins manage all members, visitors, and ministries. They can create ministry leader accounts, 
+                        generate attendance forms and QR codes, and view all analytics for the church.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title text-primary">Ministry Leader</h5>
+                    <p class="card-text">
+                        Ministry Leaders manage members within their specific ministry. They can take attendance, 
+                        view ministry analytics, and receive visitor connection cards related to their group.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title text-primary">Visitor</h5>
+                    <p class="card-text">
+                        Visitors can fill out a digital connection card using a QR code, optionally provide contact information, 
+                        and receive follow-ups from ministry leaders based on their interests.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <hr class="my-4">
+
+    <h3 class="text-secondary">Our Mission</h3>
+    <p>
+        To bring <em>clarity, connection, and community</em> to church operations by providing a tool that helps leaders 
+        stay organized, connected to their members, and focused on ministry growth — all together now.
+    </p>
+</div>
+{% endblock %}

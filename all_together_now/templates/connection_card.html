@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Visitor Connection Card{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <h1 class="text-primary fw-bold mb-3">Visitor Connection Card</h1>
+  <p class="lead">We’re glad you joined us! Please fill out this form so we can connect with you.</p>
+
+  <form class="mt-4">
+    <div class="mb-3">
+      <label class="form-label">Full Name</label>
+      <input type="text" class="form-control" placeholder="Your name">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Email</label>
+      <input type="email" class="form-control" placeholder="your@email.com">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Phone Number</label>
+      <input type="tel" class="form-control" placeholder="(555) 555-5555">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Interested Ministry</label>
+      <select class="form-select">
+        <option selected>Choose one...</option>
+        <option>Worship</option>
+        <option>Outreach</option>
+        <option>Children's Ministry</option>
+        <option>Other</option>
+      </select>
+    </div>
+    <div class="form-check mb-3">
+      <input class="form-check-input" type="checkbox" id="consentCheck">
+      <label class="form-check-label" for="consentCheck">
+        I agree to have my information stored for follow-up.
+      </label>
+    </div>
+    <button type="submit" class="btn btn-primary">Submit</button>
+  </form>
+</div>
+{% endblock %}

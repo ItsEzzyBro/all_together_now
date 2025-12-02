@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "member_management",
     "ministry",
     "attendance",
+    "members"
 ]
 
 MIDDLEWARE = [
@@ -72,6 +73,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "all_together_now.context_processors.user_role",
             ],
         },
     },
@@ -189,8 +191,8 @@ STORAGES = {
 }
 # GS_DEFAULT_ACL = "publicRead" # This is disallowed by uniform access
 
-STATIC_URL = "static/"
-STATICFILES_DIRS = [BASE_DIR / "static"]
+STATIC_URL = "/static/"
+STATICFILES_DIRS = [BASE_DIR / 'all_together_now' / 'static']
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

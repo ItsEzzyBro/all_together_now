@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+{% block content %}
+<div class="container mt-4 text-center">
+  <h1 class="text-primary fw-bold mb-3">Welcome to All Together Now</h1>
+  <p class="lead">Your centralized church membership and attendance management system.</p>
+  <p>Use this platform to manage members, connect with visitors, track attendance, and view ministry insights — all in one place.</p>
+  <a href="{% url 'dashboard' %}" class="btn btn-primary mt-3">Go to Dashboard</a>
+</div>
+{% endblock %}
