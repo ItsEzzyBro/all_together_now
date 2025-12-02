@@ -1,0 +1,5 @@
+.env
+venv
+venv/
+env/
+/all_together_now/.env

@@ -19,16 +19,22 @@ from django.contrib import admin
 from django.urls import include, path
 from django.contrib.auth import views as auth_views
 from django.views.generic import TemplateView
+from django.conf import settings 
+from django.conf.urls.static import static 
+from . import views # Import the views module
 
 
 admin.site.site_header = "All Together Now: A Church Membership Database"
 admin.site.index_title = "Church Administration"
 
+handler403 = views.csrf_failure # Add this line to handle 403 errors
 
 urlpatterns = [
-    #path("", auth_views.LoginView.as_view(template_name = 'admin/login.html'), name = 'login'),
-   #path("admin-dashboard/", admin.site.urls),
-    path("admin/", admin.site.urls),
-    path("", include("members.urls")),
+    path("", auth_views.LoginView.as_view(template_name = 'admin/login.html'), name = 'login'),
+    path("admin-dashboard/", admin.site.urls),
 ]
 
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+    urlpatterns += staticfiles_urlpatterns()
