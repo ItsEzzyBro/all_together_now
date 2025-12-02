@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Delete Member{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="alert alert-danger">
+        <h3>Delete Member?</h3>
+        <p>Are you sure you want to delete <strong>{{ member.first_name }} {{ member.last_name }}</strong>?</p>
+        <p class="text-muted small">This action cannot be undone.</p>
+      </div>
+      <form method="post" class="d-flex gap-2">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Yes, Delete</button>
+        <a href="{% url 'members_view' %}" class="btn btn-secondary">Cancel</a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

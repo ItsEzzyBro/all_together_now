@@ -25,7 +25,7 @@
     {% with role=user_role|default:"" %}
       {% if role == "Admin" or user.is_superuser or user.is_staff %}
         <div class="col-6 col-md-3">
-          <a class="btn btn-primary w-100" href="{% url 'members' %}">Manage Members</a>
+          <a class="btn btn-primary w-100" href="{% url 'members_view' %}">Manage Members</a>
         </div>
         <div class="col-6 col-md-3">
           <a class="btn btn-outline-primary w-100" href="{% url 'visitors' %}">View Visitors</a>
@@ -38,7 +38,7 @@
         </div>
       {% elif role == "Leader" or role == "Ministry Leader" %}
         <div class="col-6 col-md-4">
-          <a class="btn btn-primary w-100" href="{% url 'members' %}">My Members</a>
+          <a class="btn btn-primary w-100" href="{% url 'members_view' %}">My Members</a>
         </div>
         <div class="col-6 col-md-4">
           <a class="btn btn-outline-primary w-100" href="{% url 'attendance' %}">Mark Attendance</a>

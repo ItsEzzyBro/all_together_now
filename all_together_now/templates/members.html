@@ -1,12 +1,364 @@
 {% extends "base.html" %}
 {% block title %}Members{% endblock %}
+
 {% block content %}
 <div class="container mt-4">
-  <h1 class="text-primary fw-bold mb-3">Members Directory</h1>
-  <p class="lead">Search, view, and manage member profiles in your church community.</p>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Members</h1>
+    <a href="{% url 'member_create' %}" class="btn btn-primary">+ Add Member</a>
+  </div>
 
-  <div class="alert alert-info mt-4">
-    <strong>Coming soon:</strong> Dynamic member table with filters, edit, and delete options.
+  <form method="get" class="row g-3 mb-3">
+    <div class="col-md-12">
+      <div class="input-group">
+        <input type="search" name="q" class="form-control" placeholder="Search members by name or email" value="{{ query|default:'' }}">
+        <button class="btn btn-outline-secondary" type="submit">Search</button>
+        <a href="{% url 'members_view' %}" class="btn btn-outline-secondary">Reset</a>
+      </div>
+    </div>
+  </form>
+
+  <div class="row">
+    <div class="col-md-9">
+      {% if members %}
+        <!-- Bulk Actions (above list) -->
+        <div class="card mb-3">
+          <div class="card-header">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <strong>Bulk Actions</strong>
+              <div id="preselect_cue" style="display: none; font-size: 0.85rem;">
+                <span class="badge bg-info" id="preselect_badge_text">Action Ready</span>
+              </div>
+            </div>
+          </div>
+          <div class="card-body">
+            <form method="post" id="bulk_actions_form">
+              {% csrf_token %}
+              <div class="row g-2">
+                <div class="col-4">
+                  <select name="bulk_action" class="form-select" id="bulk_action_select">
+                    <option value="">Select Action...</option>
+                    <option value="delete">Delete Selected Users</option>
+                    <option value="add_to_ministry">Add to Ministry</option>
+                    <option value="remove_from_ministry">Remove from Ministry</option>
+                    <option value="add_to_family">Add to Family</option>
+                    <option value="remove_from_family">Remove from Family</option>
+                  </select>
+                </div>
+
+                <!-- Dynamic Field (grey placeholder or actual dropdown) -->
+                <div class="col-4">
+                  <!-- Placeholder (shown initially) -->
+                  <div id="placeholder_box" style="border: 2px dashed #ccc; background: #f5f5f5; padding: 8px 12px; border-radius: 4px; color: #999; text-align: center; height: 38px; display: flex; align-items: center; justify-content: center;">
+                    ----------
+                  </div>
+
+                  <!-- Ministry Dropdown (hidden initially) -->
+                  <div id="ministry_dropdown" style="display:none;">
+                    <select name="ministry_id" class="form-select">
+                      <option value="">Select Ministry...</option>
+                      {% for m in ministries %}
+                        <option value="{{ m.pk }}">{{ m.ministry_name }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+
+                  <!-- Family Dropdown (hidden initially) -->
+                  <div id="family_dropdown" style="display:none;">
+                    <select name="family_id" class="form-select">
+                      <option value="">Select Family...</option>
+                      {% for f in available_families %}
+                        <option value="{{ f.pk }}">{{ f.family_name }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                </div>
+
+                <div class="col-4">
+                  <button type="submit" class="btn btn-primary w-100">Apply</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-hover table-striped">
+            <thead class="table-dark">
+              <tr>
+                <th style="width: 50px;">
+                  <input type="checkbox" id="select_all_members" class="form-check-input">
+                </th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Age</th>
+                <th>Family</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for member in members %}
+                <tr>
+                  <td>
+                    <input type="checkbox" class="form-check-input member-checkbox" value="{{ member.pk }}" data-member-id="{{ member.pk }}">
+                  </td>
+                  <td><strong>{{ member.first_name }} {{ member.last_name }}</strong></td>
+                  <td>{{ member.email|default:"—" }}</td>
+                  <td>{{ member.phone_number|default:"—" }}</td>
+                  <td>{{ member.age|default:"—" }}</td>
+                  <td>{{ member.family.family_name|default:"—" }}</td>
+                  <td>
+                    <a href="{% url 'member_edit' member.pk %}" class="btn btn-sm btn-warning">Edit</a>
+                    <a href="{% url 'member_delete' member.pk %}" class="btn btn-sm btn-danger">Delete</a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <script>
+          (function(){
+            const selectAll = document.getElementById('select_all_members');
+            const checkboxes = document.querySelectorAll('.member-checkbox');
+            const bulkForm = document.getElementById('bulk_actions_form');
+            const bulkActionSelect = document.getElementById('bulk_action_select');
+            const placeholderBox = document.getElementById('placeholder_box');
+            const ministryDropdown = document.getElementById('ministry_dropdown');
+            const familyDropdown = document.getElementById('family_dropdown');
+
+            // Helper to get URL params
+            function getUrlParam(name) {
+              const params = new URLSearchParams(window.location.search);
+              return params.get(name);
+            }
+
+            // Preselect bulk action and related field from URL params
+            const preselectedAction = getUrlParam('bulk_action');
+            const preselectedMinistry = getUrlParam('ministry_id');
+            const preSelectCue = document.getElementById('preselect_cue');
+            const preSelectBadge = document.getElementById('preselect_badge_text');
+            if (preselectedAction) {
+              bulkActionSelect.value = preselectedAction;
+              // Trigger change event to update UI
+              bulkActionSelect.dispatchEvent(new Event('change'));
+              
+              // Build informative badge text
+              let badgeText = 'Action Ready';
+              if (preselectedAction === 'add_to_ministry' || preselectedAction === 'remove_from_ministry') {
+                if (preselectedMinistry) {
+                  // Find the ministry name from the select options
+                  const ministrySelect = ministryDropdown.querySelector('select');
+                  if (ministrySelect) {
+                    const option = ministrySelect.querySelector(`option[value="${preselectedMinistry}"]`);
+                    if (option) {
+                      const actionLabel = preselectedAction === 'add_to_ministry' ? 'Adding to' : 'Removing from';
+                      badgeText = `${actionLabel}: ${option.text}`;
+                    }
+                    ministrySelect.value = preselectedMinistry;
+                  }
+                }
+              } else if (preselectedAction === 'delete') {
+                badgeText = 'Ready to Delete';
+              } else if (preselectedAction === 'add_to_family' || preselectedAction === 'remove_from_family') {
+                badgeText = preselectedAction === 'add_to_family' ? 'Adding to Family' : 'Removing from Family';
+              }
+              
+              // Show the badge with informative text
+              if (preSelectCue && preSelectBadge) {
+                preSelectBadge.textContent = badgeText;
+                preSelectCue.style.display = 'inline-block';
+              }
+            }
+
+            // Select all functionality
+            if (selectAll) {
+              selectAll.addEventListener('change', function() {
+                checkboxes.forEach(cb => cb.checked = selectAll.checked);
+              });
+            }
+
+            // Show/hide dropdowns based on action
+            if (bulkActionSelect) {
+              bulkActionSelect.addEventListener('change', function() {
+                const action = this.value;
+                
+                // Hide the preselect badge when user manually changes the action
+                if (preSelectCue) {
+                  preSelectCue.style.display = 'none';
+                }
+                
+                // Hide all dropdowns initially
+                ministryDropdown.style.display = 'none';
+                familyDropdown.style.display = 'none';
+                placeholderBox.style.display = 'block';
+
+                // Show appropriate dropdown or placeholder
+                if (action === 'add_to_ministry' || action === 'remove_from_ministry') {
+                  placeholderBox.style.display = 'none';
+                  ministryDropdown.style.display = 'block';
+                } else if (action === 'add_to_family') {
+                  placeholderBox.style.display = 'none';
+                  familyDropdown.style.display = 'block';
+                }
+              });
+            }
+
+            // Validate bulk action before submit
+            if (bulkForm) {
+              bulkForm.addEventListener('submit', function(e) {
+                const checked = document.querySelectorAll('.member-checkbox:checked');
+                if (checked.length === 0) {
+                  e.preventDefault();
+                  alert('Please select at least one member.');
+                  return;
+                }
+                const action = bulkActionSelect.value;
+                if (!action) {
+                  e.preventDefault();
+                  alert('Please select an action.');
+                  return;
+                }
+                // Collect member IDs
+                const ids = Array.from(checked).map(cb => cb.value);
+                // Add hidden input with member IDs
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'member_ids';
+                input.value = ids.join(',');
+                bulkForm.appendChild(input);
+              });
+            }
+
+            // Row click to toggle checkbox
+            const rows = document.querySelectorAll('table tbody tr');
+            rows.forEach(row => {
+              row.style.cursor = 'pointer';
+              row.addEventListener('click', function(e) {
+                // Don't toggle if user clicked on action buttons
+                if (e.target.closest('a.btn')) {
+                  return;
+                }
+                const checkbox = this.querySelector('.member-checkbox');
+                if (checkbox) {
+                  checkbox.checked = !checkbox.checked;
+                }
+              });
+            });
+          })();
+        </script>
+      {% else %}
+        <div class="alert alert-info">
+          <p>No members match your criteria. <a href="{% url 'member_create' %}">Create one now</a>.</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-header">
+          <strong>Filters</strong>
+        </div>
+        <div class="card-body">
+          <form method="get">
+            <input type="hidden" name="q" value="{{ query|default:'' }}">
+
+            <div class="mb-3">
+              <label class="form-label"><strong>Ministries</strong></label>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="ministry" value="all" id="ministry_all" {% if not selected_ministries or 'all' in selected_ministries %}checked{% endif %}>
+                <label class="form-check-label" for="ministry_all">All Members</label>
+              </div>
+              {% for m in ministries %}
+                <div class="form-check">
+                  <input class="form-check-input ministry-checkbox" type="checkbox" name="ministry" value="{{ m.pk }}" id="ministry_{{ m.pk }}" {% if m.pk|stringformat:"s" in selected_ministries %}checked{% endif %}>
+                  <label class="form-check-label" for="ministry_{{ m.pk }}">{{ m.ministry_name }}</label>
+                </div>
+              {% empty %}
+                <div class="text-muted">No ministries defined</div>
+              {% endfor %}
+              <script>
+                (function(){
+                  const allCb = document.getElementById('ministry_all');
+                  const boxes = document.querySelectorAll('.ministry-checkbox');
+                  function update(){
+                    const disabled = allCb.checked;
+                    boxes.forEach(b => b.disabled = disabled);
+                  }
+                  if(allCb){
+                    allCb.addEventListener('change', update);
+                    update();
+                  }
+                })();
+              </script>
+
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label"><strong>Gender</strong></label>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="gender" value="M" id="gender_m" {% if 'M' in selected_genders %}checked{% endif %}>
+                <label class="form-check-label" for="gender_m">Male</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="gender" value="F" id="gender_f" {% if 'F' in selected_genders %}checked{% endif %}>
+                <label class="form-check-label" for="gender_f">Female</label>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label"><strong>Marital Status</strong></label>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" name="status" value="S" id="status_S" {% if 'S' in selected_statuses %}checked{% endif %}>
+                  <label class="form-check-label" for="status_S">Single</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" name="status" value="M" id="status_M" {% if 'M' in selected_statuses %}checked{% endif %}>
+                  <label class="form-check-label" for="status_M">Married</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" name="status" value="D" id="status_D" {% if 'D' in selected_statuses %}checked{% endif %}>
+                  <label class="form-check-label" for="status_D">Divorced</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" name="status" value="W" id="status_W" {% if 'W' in selected_statuses %}checked{% endif %}>
+                  <label class="form-check-label" for="status_W">Widowed</label>
+                </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label"><strong>Age Range</strong></label>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="age" value="0-17" id="age_0_17" {% if '0-17' in selected_ages %}checked{% endif %}>
+                <label class="form-check-label" for="age_0_17">0–17</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="age" value="18-25" id="age_18_25" {% if '18-25' in selected_ages %}checked{% endif %}>
+                <label class="form-check-label" for="age_18_25">18–25</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="age" value="26-40" id="age_26_40" {% if '26-40' in selected_ages %}checked{% endif %}>
+                <label class="form-check-label" for="age_26_40">26–40</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="age" value="41-60" id="age_41_60" {% if '41-60' in selected_ages %}checked{% endif %}>
+                <label class="form-check-label" for="age_41_60">41–60</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="age" value="60+" id="age_60_plus" {% if '60+' in selected_ages %}checked{% endif %}>
+                <label class="form-check-label" for="age_60_plus">60+</label>
+              </div>
+            </div>
+
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary">Apply</button>
+              <a href="{% url 'members_view' %}" class="btn btn-outline-secondary">Clear</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}
