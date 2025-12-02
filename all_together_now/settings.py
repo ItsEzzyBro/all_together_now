@@ -120,18 +120,7 @@ elif os.environ.get("GOOGLE_CLOUD_PROJECT", None):
 else:
     print("WARNING: No local .env or GOOGLE_CLOUD_PROJECT detected. Proceeding assuming environment variables are set or using SQLite fallback.")
 
-if env("DATABASE_URL") and (not USE_SQLITEDB):
-    DATABASES = {"default": env.db()}
-
-    # If the flag as been set, configure to use proxy
-    if os.getenv("USE_CLOUD_SQL_AUTH_PROXY", None):
-        DATABASES["default"]["HOST"] = "127.0.0.1"
-        DATABASES["default"]["PORT"] = 5432
-        print("Adjusted HOST/PORT for Cloud SQL Auth Proxy.")
-    
-else:
-    DATABASES = {} 
-
+if USE_SQLITEDB:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
@@ -139,6 +128,15 @@ else:
         }
     }
     print("Using local SQLite fallback configuration.")
+    
+else:
+    DATABASES = {"default": env.db()}
+
+    # If the flag as been set, configure to use proxy
+    if os.getenv("USE_CLOUD_SQL_AUTH_PROXY", None):
+        DATABASES["default"]["HOST"] = "127.0.0.1"
+        DATABASES["default"]["PORT"] = 5432
+        print("Adjusted HOST/PORT for Cloud SQL Auth Proxy.")
 
 
 # Password validation
@@ -158,14 +156,6 @@ AUTH_PASSWORD_VALIDATORS = [
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
-
-if DEBUG:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
-    }
 
 
 # Internationalization
