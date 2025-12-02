@@ -30,10 +30,13 @@ admin.site.index_title = "Church Administration"
 handler403 = views.csrf_failure # Handles 403 errors
 
 urlpatterns = [
-    path("", auth_views.LoginView.as_view(template_name = 'admin/login.html'), name = 'login'),
+    #path("", auth_views.LoginView.as_view(template_name = 'admin/login.html'), name = 'login'),
+    #path("admin-dashboard/", admin.site.urls),
+
     path("admin-dashboard/", admin.site.urls),
-    #path("admin/", admin.site.urls),
-    #path("", include("members.urls")),
+    path("", include("members.urls")),
+    path("accounts/login/", auth_views.LoginView.as_view(template_name = 'admin/login.html'), name = 'login'),
+    path("accounts/logout/", auth_views.LogoutView.as_view(), name = 'logout'),
 ]
 
 if settings.DEBUG:

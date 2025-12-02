@@ -14,7 +14,7 @@
       {% if user.is_authenticated %}
         <span class="badge bg-light text-dark">
           Role:
-          {% with role=user_role|default:user.role|default:"User" %}{{ role }}{% endwith %}
+          {% with role=user_role|default:"User" %}{{ role }}{% endwith %}
         </span>
       {% endif %}
     </div>
@@ -22,7 +22,7 @@
 
   <!-- User role  -->
   <div class="row g-3 mb-3">
-    {% with role=user_role|default:user.role|default:"" %}
+    {% with role=user_role|default:"" %}
       {% if role == "Admin" or user.is_superuser or user.is_staff %}
         <div class="col-6 col-md-3">
           <a class="btn btn-primary w-100" href="{% url 'members' %}">Manage Members</a>
