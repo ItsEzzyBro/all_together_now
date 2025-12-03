@@ -2,17 +2,24 @@
 
 A church membership database that organizes and manages the information of members and visitors in a church congregation
 
+## 👥 Team Members
+- Elizabeth Ceus
+- John Cornett
+- Matthew Orellana
+- Matthew Rodriguez
+- Esmeralda Camille
+
 ## 📋 Table of Contents
 
 - [Abstract](#abstract)
 - [Project Components](#project-components)
 - [Technology Stack](#technology-stack)
 
-## 🫂 Abstract
+## ⛪︎ Abstract
 
 A problem most small to medium size churches have is managing their church congregation and following up with visitors. All Together Now is a church membership database that will organize and manage the information of members and visitors in a church congregation. This database will give small to medium sized churches a better way of organizing and structuring their congregation and to give them a better idea of the health of the church in terms of membership. Through this database, churches are able to add new member or visitor information, edit and update existing member information, group members into different ministries or church groups, have a digital attendance check-in for members, and track member attendance. This will allow churches to reach out to members or visitors (which will help with mentoring, contacting/outreach, and other needs that the church may have), have more structure in ministries/church groups, keep track of congregation growth, as well as to make it easier to take and track attendance.
 
-## 🧑‍🧑‍🧒 Project Components
+## 🔩 Project Components
 
 ### Member Management
 
