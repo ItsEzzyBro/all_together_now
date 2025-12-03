@@ -1,6 +1,285 @@
 {% extends "base.html" %}
-{% block title %} Analytics {% endblock %}
+{% block title %}Analytics{% endblock %}
+
 {% block content %}
-<h1 class = "mb-3">Analytics</h1>
-<p> Analytics page  </p>
+<div class="container mt-3">
+
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="mb-0">Analytics</h1>
+      <small class="text-muted">Attendance & Demographic Insights</small>
+    </div>
+    <div class="text-end">
+      {% if user.is_authenticated %}
+        <span class="badge bg-light text-dark">
+          Role:
+          {% with role=user_role|default:user.role|default:"User" %}{{ role }}{% endwith %}
+        </span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Summary cards -->
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-lg-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted">Total Members</div>
+          <div class="h3 mb-0">{{ summary.total_members|default:0 }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted">Check-ins (Last 30 days)</div>
+          <div class="h3 mb-0">{{ summary.total_checkins_30|default:0 }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted">Events (Last 30 days)</div>
+          <div class="h3 mb-0">{{ summary.unique_events_30|default:0 }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted">Avg Attendance / Event</div>
+          <div class="h3 mb-0">{{ summary.avg_attendance_30|default:0 }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts row -->
+  <div class="row g-3 mb-3">
+    <!-- Line chart: attendance trend -->
+    <div class="col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title mb-3">Attendance Trend (Last 7 Dates)</h5>
+          <canvas id="attendanceChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pie chart: gender -->
+    <div class="col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title mb-3">Gender Breakdown</h5>
+          {% if gender_stats %}
+            <canvas id="genderChart"></canvas>
+          {% else %}
+            <p class="text-muted mb-0">No gender data available.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- More charts / tables -->
+  <div class="row g-3 mb-3">
+    <!-- Bar chart: Ministry sizes -->
+    <div class="col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title mb-3">Members per Ministry</h5>
+          {% if ministries %}
+            <canvas id="ministryChart"></canvas>
+          {% else %}
+            <p class="text-muted mb-0">No ministries configured.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Bar chart: Age distribution -->
+    <div class="col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title mb-3">Age Distribution</h5>
+          <canvas id="ageChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Attendance table -->
+  <div class="row g-3">
+    <div class="col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title mb-3">Recent Attendance (Table)</h5>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th class="text-end">Check-ins</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in attendance_trend %}
+                  <tr>
+                    <td>{{ row.date|date:"M j, Y" }}</td>
+                    <td class="text-end">{{ row.count }}</td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="2" class="text-muted">No attendance data in the last 30 days.</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ministries table -->
+    <div class="col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title mb-3">Ministry Overview</h5>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th>Ministry</th>
+                  <th class="text-center">Active?</th>
+                  <th class="text-end">Members</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for m in ministries %}
+                  <tr>
+                    <td>{{ m.name }}</td>
+                    <td class="text-center">
+                      {% if m.is_active %}
+                        <span class="badge bg-success">Active</span>
+                      {% else %}
+                        <span class="badge bg-secondary">Inactive</span>
+                      {% endif %}
+                    </td>
+                    <td class="text-end">{{ m.member_count }}</td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="3" class="text-muted">No ministries configured.</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+// Data from Django context (parsed safely as JSON)
+const attendanceLabels  = JSON.parse('{{ attendance_labels_json|escapejs }}');
+const attendanceValues  = JSON.parse('{{ attendance_values_json|escapejs }}');
+const genderLabels      = JSON.parse('{{ gender_labels_json|escapejs }}');
+const genderValues      = JSON.parse('{{ gender_values_json|escapejs }}');
+const ageLabels         = JSON.parse('{{ age_labels_json|escapejs }}');
+const ageValues         = JSON.parse('{{ age_values_json|escapejs }}');
+const ministryLabels    = JSON.parse('{{ ministry_labels_json|escapejs }}');
+const ministryValues    = JSON.parse('{{ ministry_values_json|escapejs }}');
+
+// Attendance Line Chart
+if (attendanceLabels.length > 0) {
+  const ctxAttendance = document.getElementById('attendanceChart').getContext('2d');
+  new Chart(ctxAttendance, {
+    type: 'line',
+    data: {
+      labels: attendanceLabels,
+      datasets: [{
+        label: 'Check-ins',
+        data: attendanceValues,
+        fill: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: { beginAtZero: true }
+      }
+    }
+  });
+}
+
+// Gender Pie Chart
+if (genderLabels.length > 0) {
+  const ctxGender = document.getElementById('genderChart').getContext('2d');
+  new Chart(ctxGender, {
+    type: 'pie',
+    data: {
+      labels: genderLabels,
+      datasets: [{
+        data: genderValues,
+      }]
+    },
+    options: {
+      responsive: true,
+    }
+  });
+}
+
+// Ministry Bar Chart
+if (ministryLabels.length > 0) {
+  const ctxMinistry = document.getElementById('ministryChart').getContext('2d');
+  new Chart(ctxMinistry, {
+    type: 'bar',
+    data: {
+      labels: ministryLabels,
+      datasets: [{
+        label: 'Members',
+        data: ministryValues,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      scales: {
+        x: { beginAtZero: true }
+      }
+    }
+  });
+}
+
+// Age Bar Chart
+if (ageLabels.length > 0) {
+  const ctxAge = document.getElementById('ageChart').getContext('2d');
+  new Chart(ctxAge, {
+    type: 'bar',
+    data: {
+      labels: ageLabels,
+      datasets: [{
+        label: 'Members',
+        data: ageValues,
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: { beginAtZero: true }
+      }
+    }
+  });
+}
+</script>
 {% endblock %}
