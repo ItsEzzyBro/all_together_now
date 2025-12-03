@@ -32,12 +32,19 @@
                 {% endif %}
               </td>
               <td style="white-space: nowrap;">
-                <a href="{% url 'ministry_edit' ministry.pk %}" class="btn btn-sm btn-warning">Edit</a>
-                <a href="{% url 'ministry_delete' ministry.pk %}" class="btn btn-sm btn-danger">Delete</a>
-                <a href="{% url 'members_view' %}?bulk_action=add_to_ministry&ministry_id={{ ministry.pk }}" class="btn btn-sm btn-success">Add member</a>
-                <a href="{% url 'members_view' %}?bulk_action=remove_from_ministry&ministry_id={{ ministry.pk }}" class="btn btn-sm btn-danger">Remove members</a>
-                <a href="{% url 'events' %}?ministry={{ ministry.pk }}" class="btn btn-sm btn-primary">View Events</a>
-                <a href="{% url 'event_create' %}?ministry={{ ministry.pk }}" class="btn btn-sm btn-info">Create Event</a>
+                {% if ministry.pk in accessible_ministry_ids %}
+                  {# User has role for this ministry - show all actions #}
+                  <a href="{% url 'ministry_edit' ministry.pk %}" class="btn btn-sm btn-warning">Edit</a>
+                  <a href="{% url 'ministry_delete' ministry.pk %}" class="btn btn-sm btn-danger">Delete</a>
+                  <a href="{% url 'members_view' %}?bulk_action=add_to_ministry&ministry_id={{ ministry.pk }}" class="btn btn-sm btn-success">Add member</a>
+                  <a href="{% url 'members_view' %}?bulk_action=remove_from_ministry&ministry_id={{ ministry.pk }}" class="btn btn-sm btn-danger">Remove members</a>
+                  <a href="{% url 'events' %}?ministry={{ ministry.pk }}" class="btn btn-sm btn-primary">View Events</a>
+                  <a href="{% url 'event_create' %}?ministry={{ ministry.pk }}" class="btn btn-sm btn-info">Create Event</a>
+                {% else %}
+                  {# User doesn't have role - only view events #}
+                  <a href="{% url 'events' %}?ministry={{ ministry.pk }}" class="btn btn-sm btn-primary">View Events</a>
+                  <span class="text-muted small">— View only</span>
+                {% endif %}
               </td>
             </tr>
           {% endfor %}

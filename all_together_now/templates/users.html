@@ -1,0 +1,406 @@
+{% extends "base.html" %}
+{% block title %}Users{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Users</h1>
+    <a href="{% url 'user_create' %}" class="btn btn-primary">+ Add User</a>
+  </div>
+
+  <form method="get" class="row g-3 mb-3">
+    <div class="col-md-12">
+      <div class="input-group">
+        <input type="search" name="q" class="form-control" placeholder="Search by username or email" value="{{ query|default:'' }}">
+        <button class="btn btn-outline-secondary" type="submit">Search</button>
+        <a href="{% url 'users_list' %}" class="btn btn-outline-secondary">Reset</a>
+      </div>
+    </div>
+  </form>
+
+  <div class="row">
+    <div class="col-md-9">
+      {% if users %}
+        <!-- Bulk Actions -->
+        <div class="card mb-3">
+          <div class="card-header">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <strong>Bulk Actions</strong>
+              <div id="preselect_cue" style="display: none; font-size: 0.85rem;">
+                <span class="badge bg-info" id="preselect_badge_text">Action Ready</span>
+              </div>
+            </div>
+          </div>
+          <div class="card-body">
+            <form method="post" id="bulk_actions_form">
+              {% csrf_token %}
+              <div class="row g-2">
+                <div class="col-4">
+                  <select name="bulk_action" class="form-select" id="bulk_action_select">
+                    <option value="">Select Action...</option>
+                    <option value="delete">Delete Selected Users</option>
+                    <option value="activate">Activate Users</option>
+                    <option value="deactivate">Deactivate Users</option>
+                    <option value="add_role">Add Role</option>
+                    <option value="remove_role">Remove Role</option>
+                  </select>
+                </div>
+
+                <!-- Dynamic Field -->
+                <div class="col-4">
+                  <!-- Placeholder -->
+                  <div id="placeholder_box" style="border: 2px dashed #ccc; background: #f5f5f5; padding: 8px 12px; border-radius: 4px; color: #999; text-align: center; height: 38px; display: flex; align-items: center; justify-content: center;">
+                    ----------
+                  </div>
+
+                  <!-- Role Dropdown -->
+                  <div id="role_dropdown" style="display:none;">
+                    <select name="role_id" class="form-select">
+                      <option value="">Select Role...</option>
+                      {% for r in roles %}
+                        <option value="{{ r.pk }}">{{ r.role_name }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                </div>
+
+                <div class="col-4">
+                  <button type="submit" class="btn btn-primary w-100">Apply</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-hover table-striped align-middle">
+            <thead class="table-dark">
+              <tr>
+                <th style="width: 50px;">
+                  <input type="checkbox" id="select_all_users" class="form-check-input">
+                </th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Roles</th>
+                <th>Status</th>
+                <th style="width: 280px; min-width: 280px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for user in users %}
+                <tr>
+                  <td>
+                    <input type="checkbox" class="form-check-input user-checkbox" value="{{ user.pk }}" data-user-id="{{ user.pk }}">
+                  </td>
+                  <td title="{{ user.username }}" style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: help;"><strong>{{ user.username }}</strong></td>
+                  <td title="{{ user.email }}" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: help;">
+                    {{ user.email|default:'—' }}
+                  </td>
+                  <td title="{% for ur in user.role_list %}{{ ur.role.role_name }}{% if not forloop.last %}, {% endif %}{% endfor %}" style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: help;">
+                    {% for ur in user.role_list %}
+                      <span class="badge bg-secondary">{{ ur.role.role_name }}</span>
+                    {% empty %}
+                      —
+                    {% endfor %}
+                  </td>
+                  <td>
+                    {% if user.is_active %}
+                      <span class="badge bg-success">Active</span>
+                    {% else %}
+                      <span class="badge bg-secondary">Inactive</span>
+                    {% endif %}
+                    {% if user.is_staff %}
+                      <span class="badge bg-primary">Admin</span>
+                    {% endif %}
+                  </td>
+                  <td style="white-space: nowrap;">
+                    <a href="{% url 'user_edit' user.pk %}" class="btn btn-sm btn-warning">Edit</a>
+                    <a href="{% url 'user_delete' user.pk %}" class="btn btn-sm btn-danger">Delete</a>
+                    <button class="btn btn-sm btn-outline-secondary toggle-user-details" data-user-id="{{ user.pk }}">Show Details</button>
+                  </td>
+                </tr>
+                <tr id="user-details-{{ user.pk }}" class="user-details-row" style="display: none;">
+                  <td colspan="6" style="background-color: #f8f9fa; padding: 15px;">
+                    <div class="row">
+                      <div class="col-md-6">
+                        <p><strong>Full Name:</strong> {{ user.first_name }} {{ user.last_name }}{% if not user.first_name and not user.last_name %}—{% endif %}</p>
+                        <p><strong>Email:</strong> {{ user.email|default:'—' }}</p>
+                        <p><strong>Username:</strong> {{ user.username }}</p>
+                      </div>
+                      <div class="col-md-6">
+                        <p><strong>Roles:</strong> 
+                          {% for ur in user.role_list %}
+                            <span class="badge bg-secondary">{{ ur.role.role_name }}</span>
+                          {% empty %}
+                            —
+                          {% endfor %}
+                        </p>
+                        <p><strong>Date Joined:</strong> {{ user.date_joined|date:"M d, Y g:i A" }}</p>
+                        <p><strong>Last Login:</strong> {% if user.last_login %}{{ user.last_login|date:"M d, Y g:i A" }}{% else %}Never{% endif %}</p>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <script>
+          document.addEventListener('DOMContentLoaded', function() {
+            const selectAll = document.getElementById('select_all_users');
+            const checkboxes = document.querySelectorAll('.user-checkbox');
+            const bulkForm = document.getElementById('bulk_actions_form');
+            const bulkActionSelect = document.getElementById('bulk_action_select');
+            const placeholderBox = document.getElementById('placeholder_box');
+            const roleDropdown = document.getElementById('role_dropdown');
+
+            // Helper to get URL params
+            function getUrlParam(name) {
+              const params = new URLSearchParams(window.location.search);
+              return params.get(name);
+            }
+
+            // Preselect bulk action
+            const preselectedAction = getUrlParam('bulk_action');
+            const preselectedRole = getUrlParam('role_id');
+            const preSelectCue = document.getElementById('preselect_cue');
+            const preSelectBadge = document.getElementById('preselect_badge_text');
+            if (preselectedAction) {
+              bulkActionSelect.value = preselectedAction;
+              bulkActionSelect.dispatchEvent(new Event('change'));
+              
+              let badgeText = 'Action Ready';
+              if (preselectedAction === 'add_role' || preselectedAction === 'remove_role') {
+                if (preselectedRole) {
+                  const roleSelect = roleDropdown.querySelector('select');
+                  if (roleSelect) {
+                    const option = roleSelect.querySelector(`option[value="${preselectedRole}"]`);
+                    if (option) {
+                      const actionLabel = preselectedAction === 'add_role' ? 'Adding' : 'Removing';
+                      badgeText = `${actionLabel}: ${option.text}`;
+                    }
+                    roleSelect.value = preselectedRole;
+                  }
+                }
+              } else if (preselectedAction === 'delete') {
+                badgeText = 'Ready to Delete';
+              } else if (preselectedAction === 'activate') {
+                badgeText = 'Activating Users';
+              } else if (preselectedAction === 'deactivate') {
+                badgeText = 'Deactivating Users';
+              }
+              
+              if (preSelectCue && preSelectBadge) {
+                preSelectBadge.textContent = badgeText;
+                preSelectCue.style.display = 'inline-block';
+              }
+            }
+
+            // Select all functionality
+            if (selectAll) {
+              selectAll.addEventListener('change', function() {
+                checkboxes.forEach(cb => cb.checked = selectAll.checked);
+              });
+            }
+
+            // Show/hide dropdowns based on action
+            if (bulkActionSelect) {
+              bulkActionSelect.addEventListener('change', function() {
+                const action = this.value;
+                
+                if (preSelectCue) {
+                  preSelectCue.style.display = 'none';
+                }
+                
+                roleDropdown.style.display = 'none';
+                placeholderBox.style.display = 'block';
+
+                if (action === 'add_role' || action === 'remove_role') {
+                  placeholderBox.style.display = 'none';
+                  roleDropdown.style.display = 'block';
+                }
+              });
+            }
+
+            // Validate bulk action before submit
+            if (bulkForm) {
+              bulkForm.addEventListener('submit', function(e) {
+                const checked = document.querySelectorAll('.user-checkbox:checked');
+                if (checked.length === 0) {
+                  e.preventDefault();
+                  alert('Please select at least one user.');
+                  return;
+                }
+                const action = bulkActionSelect.value;
+                if (!action) {
+                  e.preventDefault();
+                  alert('Please select an action.');
+                  return;
+                }
+                const ids = Array.from(checked).map(cb => cb.value);
+                ids.forEach(id => {
+                  const input = document.createElement('input');
+                  input.type = 'hidden';
+                  input.name = 'user_ids';
+                  input.value = id;
+                  bulkForm.appendChild(input);
+                });
+              });
+            }
+
+            // Toggle user details
+            const toggleButtons = document.querySelectorAll('.toggle-user-details');
+            toggleButtons.forEach(btn => {
+              btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const userId = this.getAttribute('data-user-id');
+                const detailsRow = document.getElementById('user-details-' + userId);
+                if (detailsRow.style.display === 'none') {
+                  detailsRow.style.display = '';
+                  this.textContent = 'Hide Details';
+                } else {
+                  detailsRow.style.display = 'none';
+                  this.textContent = 'Show Details';
+                }
+              });
+            });
+
+            // Row click to toggle checkbox (skip details rows)
+            const rows = document.querySelectorAll('table tbody tr:not(.user-details-row)');
+            rows.forEach(row => {
+              row.style.cursor = 'pointer';
+              row.addEventListener('click', function(e) {
+                if (e.target.closest('a.btn') || e.target.closest('button.btn')) {
+                  return;
+                }
+                const checkbox = this.querySelector('.user-checkbox');
+                if (checkbox) {
+                  checkbox.checked = !checkbox.checked;
+                }
+              });
+            });
+          });
+        </script>
+      {% else %}
+        <div class="alert alert-info">
+          <p>No users found. <a href="{% url 'user_create' %}">Create one now</a>.</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-header">
+          <strong>Filters</strong>
+        </div>
+        <div class="card-body">
+          <form method="get">
+            <input type="hidden" name="q" value="{{ query|default:'' }}">
+
+            <div class="mb-3">
+              <label class="form-label"><strong>Ministry Access</strong></label>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="ministry" value="all" id="ministry_all" {% if not selected_ministries or 'all' in selected_ministries %}checked{% endif %}>
+                <label class="form-check-label" for="ministry_all">All Ministries</label>
+              </div>
+              {% for m in ministries %}
+                <div class="form-check">
+                  <input class="form-check-input ministry-checkbox" type="checkbox" name="ministry" value="{{ m.pk }}" id="ministry_{{ m.pk }}" {% if m.pk|stringformat:"s" in selected_ministries %}checked{% endif %}>
+                  <label class="form-check-label" for="ministry_{{ m.pk }}">{{ m.ministry_name }}</label>
+                </div>
+              {% empty %}
+                <div class="text-muted">No ministries defined</div>
+              {% endfor %}
+            </div>
+
+            <div class="mb-3">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <label class="form-label mb-0"><strong>Roles</strong></label>
+                <a href="{% url 'role_create' %}" class="btn btn-sm btn-outline-primary">+ Create</a>
+              </div>
+              <div style="max-height: 200px; overflow-y: auto; border: 1px solid #dee2e6; padding: 8px; border-radius: 4px;">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" name="role" value="all" id="role_all" {% if not selected_roles or 'all' in selected_roles %}checked{% endif %}>
+                  <label class="form-check-label" for="role_all">All Roles</label>
+                </div>
+                {% for r in roles %}
+                  <div class="form-check role-item d-flex justify-content-between align-items-center">
+                    <div>
+                      <input class="form-check-input role-checkbox" type="checkbox" name="role" value="{{ r.pk }}" id="role_{{ r.pk }}" {% if r.pk|stringformat:"s" in selected_roles %}checked{% endif %}>
+                      <label class="form-check-label" for="role_{{ r.pk }}">{{ r.role_name }}</label>
+                    </div>
+                    <div class="btn-group btn-group-sm" role="group">
+                      {% if r.role_name == 'Church Administrator' %}
+                        <span class="btn btn-outline-secondary btn-sm" style="padding: 0 4px; font-size: 0.7rem; width: 28px; cursor: help;" title="Church Administrator is protected: name locked, auto-syncs to all ministries">?</span>
+                      {% else %}
+                        <a href="{% url 'role_edit' r.pk %}" class="btn btn-outline-secondary btn-sm" style="padding: 0 4px; font-size: 0.7rem; width: 28px;" title="Edit">✏️</a>
+                        <a href="{% url 'role_delete' r.pk %}" class="btn btn-outline-danger btn-sm" style="padding: 0 4px; font-size: 0.7rem; width: 28px;" title="Delete">🗑️</a>
+                      {% endif %}
+                    </div>
+                  </div>
+                {% empty %}
+                  <div class="text-muted">No roles defined</div>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label"><strong>Status</strong></label>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="status" value="" id="status_all" {% if not status_filter %}checked{% endif %}>
+                <label class="form-check-label" for="status_all">All</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="status" value="active" id="status_active" {% if status_filter == 'active' %}checked{% endif %}>
+                <label class="form-check-label" for="status_active">Active</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="status" value="inactive" id="status_inactive" {% if status_filter == 'inactive' %}checked{% endif %}>
+                <label class="form-check-label" for="status_inactive">Inactive</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="status" value="staff" id="status_staff" {% if status_filter == 'staff' %}checked{% endif %}>
+                <label class="form-check-label" for="status_staff">Admin Only</label>
+              </div>
+            </div>
+
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary">Apply</button>
+              <a href="{% url 'users_list' %}" class="btn btn-outline-secondary">Clear</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Ministry filter "All" checkbox logic
+    const allCb = document.getElementById('ministry_all');
+    const ministryCheckboxes = document.querySelectorAll('.ministry-checkbox');
+    if (allCb) {
+      function updateMinistryCheckboxes() {
+        const disabled = allCb.checked;
+        ministryCheckboxes.forEach(b => b.disabled = disabled);
+      }
+      allCb.addEventListener('change', updateMinistryCheckboxes);
+      updateMinistryCheckboxes();
+    }
+
+    // Role filter "All" checkbox logic
+    const roleAllCb = document.getElementById('role_all');
+    const roleCheckboxes = document.querySelectorAll('.role-checkbox');
+    if (roleAllCb) {
+      function updateRoleCheckboxes() {
+        const disabled = roleAllCb.checked;
+        roleCheckboxes.forEach(b => b.disabled = disabled);
+      }
+      roleAllCb.addEventListener('change', updateRoleCheckboxes);
+      updateRoleCheckboxes();
+    }
+  });
+</script>
+{% endblock %}

@@ -52,14 +52,18 @@
                     {% endif %}
                   </td>
                   <td style="white-space: nowrap;">
-                    <a href="{% url 'event_edit' event.pk %}" class="btn btn-sm btn-warning">Edit</a>
-                    <a href="{% url 'event_delete' event.pk %}" class="btn btn-sm btn-danger">Delete</a>
-                    <button type="button" class="btn btn-sm btn-info" title="Generate QR Code" onclick="openQrPrint({{ event.pk }}, '{{ event.event_name|escapejs }}')">
-                      <i class="bi bi-qr-code"></i> QR
-                    </button>
-                    <a href="{% url 'attendance_form' event.pk %}" class="btn btn-sm btn-success" title="Mark Attendance">
-                      <i class="bi bi-check-circle"></i> Mark Attendance
-                    </a>
+                    {% if not event.ministry_id or event.ministry_id in accessible_ministry_ids %}
+                      {# User has access to this event's ministry - show all actions #}
+                      <a href="{% url 'event_edit' event.pk %}" class="btn btn-sm btn-warning">Edit</a>
+                      <a href="{% url 'event_delete' event.pk %}" class="btn btn-sm btn-danger">Delete</a>
+                      <button type="button" class="btn btn-sm btn-info" title="Generate QR Code" onclick="openQrPrint({{ event.pk }}, '{{ event.event_name|escapejs }}')">
+                        <i class="bi bi-qr-code"></i> QR
+                      </button>
+                      <a href="{% url 'attendance_form' event.pk %}" class="btn btn-sm btn-success" title="Mark Attendance">
+                        <i class="bi bi-check-circle"></i> Mark Attendance
+                      </a>
+                    {% endif %}
+                    {# Show details is always available #}
                     <button class="btn btn-sm btn-outline-secondary toggle-details-{{ event.pk }}" type="button" data-bs-toggle="collapse" data-bs-target="#event-desc-{{ event.pk }}" aria-expanded="false" aria-controls="event-desc-{{ event.pk }}">Show Details</button>
                   </td>
                 </tr>

@@ -3,7 +3,8 @@ from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from member_management.models import Member, Family, Vistor
-from django.db.models import Q, Count
+from django.db.models import Q, Count, F, IntegerField, Case, When, Value
+from django.db.models.functions import Now, ExtractYear, ExtractMonth, ExtractDay
 from datetime import date, time, timedelta
 from django.utils import timezone 
 from ministry.models import Ministry, MembersAndMinistries
@@ -329,13 +330,32 @@ def analytics_view(request):
     gender_labels = [g["label"] for g in gender_stats]
     gender_values = [g["count"] for g in gender_stats]
 
-    # Age stats
+    # Age stats - compute in Python using Member.age property
+    age_0_12 = age_13_17 = age_18_29 = age_30_49 = age_50_plus = 0
+    for m in members_qs:
+        try:
+            age = m.age if m.date_of_birth else None
+        except Exception:
+            age = None
+        if age is None:
+            continue
+        if 0 <= age <= 12:
+            age_0_12 += 1
+        elif 13 <= age <= 17:
+            age_13_17 += 1
+        elif 18 <= age <= 29:
+            age_18_29 += 1
+        elif 30 <= age <= 49:
+            age_30_49 += 1
+        elif age >= 50:
+            age_50_plus += 1
+
     age_buckets = {
-        "0–12": members_qs.filter(age__gte=0, age__lte=12).count(),
-        "13–17": members_qs.filter(age__gte=13, age__lte=17).count(),
-        "18–29": members_qs.filter(age__gte=18, age__lte=29).count(),
-        "30–49": members_qs.filter(age__gte=30, age__lte=49).count(),
-        "50+": members_qs.filter(age__gte=50).count(),
+        "0–12": age_0_12,
+        "13–17": age_13_17,
+        "18–29": age_18_29,
+        "30–49": age_30_49,
+        "50+": age_50_plus,
     }
     age_labels = list(age_buckets.keys())
     age_values = list(age_buckets.values())

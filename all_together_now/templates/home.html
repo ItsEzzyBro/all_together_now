@@ -5,6 +5,15 @@
   <h1 class="text-primary fw-bold mb-3">Welcome to All Together Now</h1>
   <p class="lead">Your centralized church membership and attendance management system.</p>
   <p>Use this platform to manage members, connect with visitors, track attendance, and view ministry insights — all in one place.</p>
-  <a href="{% url 'dashboard' %}" class="btn btn-primary mt-3">Go to Dashboard</a>
+  
+  {% if user.is_authenticated %}
+    <a href="{% url 'dashboard' %}" class="btn btn-primary mt-3">Go to Dashboard</a>
+  {% else %}
+    <div class="mt-4">
+      <a href="{% url 'about' %}" class="btn btn-outline-primary btn-lg mx-2 mb-2">About Us</a>
+      <a href="{% url 'connection_card' %}" class="btn btn-primary btn-lg mx-2 mb-2">Fill Out Connection Card</a>
+      <a href="{% url 'contact' %}" class="btn btn-outline-primary btn-lg mx-2 mb-2">Contact Us</a>
+    </div>
+  {% endif %}
 </div>
 {% endblock %}

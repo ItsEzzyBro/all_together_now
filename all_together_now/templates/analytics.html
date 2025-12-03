@@ -12,10 +12,10 @@
     </div>
     <div class="text-end">
       {% if user.is_authenticated %}
-        <span class="badge bg-light text-dark">
-          Role:
-          {% with role=user_role|default:user.role|default:"User" %}{{ role }}{% endwith %}
-        </span>
+        <span class="badge bg-light text-dark">Signed In</span>
+        {% if is_church_admin %}
+          <span class="badge bg-primary">Church Administrator</span>
+        {% endif %}
       {% endif %}
     </div>
   </div>

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}{{ action }} Role{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h1>{{ action }} Role</h1>
+  
+  {% if role and role.role_name == 'Church Administrator' %}
+    <div class="alert alert-info">
+      <strong>Note:</strong> The "Church Administrator" role is protected. The name cannot be changed and ministry access is automatically synchronized to include all ministries.
+    </div>
+  {% endif %}
+  
+  <form method="post" class="mt-4" style="max-width: 600px;">
+    {% csrf_token %}
+    
+    <div class="mb-3">
+      <label for="id_role_name" class="form-label">Role Name *</label>
+      {% if role and role.role_name == 'Church Administrator' %}
+        <input type="text" class="form-control" value="Church Administrator" disabled>
+        <input type="hidden" name="role_name" value="Church Administrator">
+        <small class="form-text text-muted">This role name cannot be changed.</small>
+      {% else %}
+        {{ form.role_name }}
+        {% if form.role_name.errors %}
+          <div class="text-danger">{{ form.role_name.errors }}</div>
+        {% endif %}
+      {% endif %}
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Ministry Access</label>
+      {% if role and role.role_name == 'Church Administrator' %}
+        <div class="alert alert-secondary">
+          <strong>Automatic Access:</strong> This role automatically has access to all ministries. Ministry selection is disabled.
+        </div>
+        <div style="opacity: 0.6; pointer-events: none;">
+          {{ form.ministries }}
+        </div>
+      {% else %}
+        {{ form.ministries }}
+        {% if form.ministries.errors %}
+          <div class="text-danger">{{ form.ministries.errors }}</div>
+        {% endif %}
+        <small class="form-text text-muted">{{ form.ministries.help_text }}</small>
+      {% endif %}
+    </div>
+
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger">
+        {{ form.non_field_errors }}
+      </div>
+    {% endif %}
+
+    <div class="mt-4">
+      <button type="submit" class="btn btn-primary">Save</button>
+      <a href="{% url 'users_list' %}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

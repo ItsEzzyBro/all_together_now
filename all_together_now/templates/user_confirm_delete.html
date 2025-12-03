@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Delete User{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="card" style="max-width: 500px; margin: 0 auto;">
+    <div class="card-header bg-danger text-white">
+      <h4 class="mb-0">Confirm Delete</h4>
+    </div>
+    <div class="card-body">
+      <p>Are you sure you want to delete the user <strong>{{ user_obj.username }}</strong>?</p>
+      
+      {% if user_obj.profile.member %}
+        <div class="alert alert-warning">
+          <strong>Note:</strong> This user is associated with member {{ user_obj.profile.member }}. The member will not be deleted.
+        </div>
+      {% endif %}
+      
+      <p class="text-muted">This action cannot be undone. All role assignments will be removed.</p>
+      
+      <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Yes, Delete</button>
+        <a href="{% url 'users_list' %}" class="btn btn-secondary">Cancel</a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

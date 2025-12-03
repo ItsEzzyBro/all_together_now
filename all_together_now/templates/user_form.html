@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% block title %}{{ action }} User{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h1>{{ action }} User</h1>
+  
+  <form method="post" class="mt-4">
+    {% csrf_token %}
+    
+    <div class="mb-3">
+      <label for="id_username" class="form-label">Username *</label>
+      {{ form.username }}
+      {% if form.username.errors %}
+        <div class="text-danger">{{ form.username.errors }}</div>
+      {% endif %}
+    </div>
+
+    {% if action == 'Create' %}
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label for="id_password" class="form-label">Password *</label>
+          {{ form.password }}
+          {% if form.password.errors %}
+            <div class="text-danger">{{ form.password.errors }}</div>
+          {% endif %}
+          <small class="form-text text-muted">{{ form.password.help_text }}</small>
+        </div>
+
+        <div class="col-md-6 mb-3">
+          <label for="id_password_confirm" class="form-label">Confirm Password *</label>
+          {{ form.password_confirm }}
+          {% if form.password_confirm.errors %}
+            <div class="text-danger">{{ form.password_confirm.errors }}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Names and email under passwords on create -->
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label for="id_first_name" class="form-label">First Name</label>
+          {{ form.first_name }}
+          {% if form.first_name.errors %}
+            <div class="text-danger">{{ form.first_name.errors }}</div>
+          {% endif %}
+        </div>
+        <div class="col-md-6 mb-3">
+          <label for="id_last_name" class="form-label">Last Name</label>
+          {{ form.last_name }}
+          {% if form.last_name.errors %}
+            <div class="text-danger">{{ form.last_name.errors }}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label for="id_email" class="form-label">Email</label>
+        {{ form.email }}
+        {% if form.email.errors %}
+          <div class="text-danger">{{ form.email.errors }}</div>
+        {% endif %}
+      </div>
+    {% else %}
+      <!-- Edit: show names and email near top since no passwords -->
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label for="id_first_name" class="form-label">First Name</label>
+          {{ form.first_name }}
+          {% if form.first_name.errors %}
+            <div class="text-danger">{{ form.first_name.errors }}</div>
+          {% endif %}
+        </div>
+        <div class="col-md-6 mb-3">
+          <label for="id_last_name" class="form-label">Last Name</label>
+          {{ form.last_name }}
+          {% if form.last_name.errors %}
+            <div class="text-danger">{{ form.last_name.errors }}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label for="id_email" class="form-label">Email</label>
+        {{ form.email }}
+        {% if form.email.errors %}
+          <div class="text-danger">{{ form.email.errors }}</div>
+        {% endif %}
+      </div>
+    {% endif %}
+
+
+    <!-- Member association removed for now; will re-implement later -->
+
+    <div class="row">
+      <div class="col-md-6 mb-3">
+        <div class="form-check">
+          {% if action == 'Edit' and user.is_superuser %}
+            <input type="checkbox" class="form-check-input" id="id_is_staff" name="is_staff" checked disabled>
+            <input type="hidden" name="is_staff" value="on">
+          {% else %}
+            {{ form.is_staff }}
+          {% endif %}
+          <label class="form-check-label" for="id_is_staff">
+            Admin
+          </label>
+        </div>
+        <small class="form-text text-muted">Admin users can access all ministries and admin site</small>
+        {% if action == 'Edit' and user.is_superuser %}
+          <div class="alert alert-warning mt-2" style="padding: 8px; font-size: 0.9rem;">
+            <strong>Superuser:</strong> Admin status is locked for security.
+          </div>
+        {% else %}
+          <div id="admin-role-indicator" class="alert alert-info mt-2" style="display: none; padding: 8px; font-size: 0.9rem;">
+            <strong>Note:</strong> Checking Admin automatically assigns the "Church Administrator" role with access to all ministries.
+          </div>
+        {% endif %}
+      </div>
+      <div class="col-md-6 mb-3">
+        <div class="form-check">
+          {% if action == 'Edit' and user.is_superuser %}
+            <input type="checkbox" class="form-check-input" id="id_is_active" name="is_active" checked disabled>
+            <input type="hidden" name="is_active" value="on">
+          {% else %}
+            {{ form.is_active }}
+          {% endif %}
+          <label class="form-check-label" for="id_is_active">
+            Active
+          </label>
+        </div>
+        <small class="form-text text-muted">Active users can log in</small>
+        {% if action == 'Edit' and user.is_superuser %}
+          <div class="alert alert-warning mt-2" style="padding: 8px; font-size: 0.9rem;">
+            <strong>Superuser:</strong> Active status is locked for security.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Roles</label>
+      {{ form.roles }}
+      {% if form.roles.errors %}
+        <div class="text-danger">{{ form.roles.errors }}</div>
+      {% endif %}
+      <small class="form-text text-muted">{{ form.roles.help_text }}</small>
+    </div>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const adminCheckbox = document.getElementById('id_is_staff');
+        const adminIndicator = document.getElementById('admin-role-indicator');
+        const rolesCheckboxes = document.querySelectorAll('input[name="roles"]');
+        
+        // Find Church Administrator role checkbox
+        let churchAdminCheckbox = null;
+        rolesCheckboxes.forEach(cb => {
+          const label = document.querySelector(`label[for="${cb.id}"]`);
+          if (label && label.textContent.trim() === 'Church Administrator') {
+            churchAdminCheckbox = cb;
+          }
+        });
+
+        function updateAdminRoleUI() {
+          if (adminCheckbox && adminCheckbox.checked) {
+            adminIndicator.style.display = 'block';
+            // Visually indicate Church Administrator is auto-assigned
+            if (churchAdminCheckbox) {
+              churchAdminCheckbox.checked = true;
+              churchAdminCheckbox.disabled = true;
+              const label = document.querySelector(`label[for="${churchAdminCheckbox.id}"]`);
+              if (label) {
+                label.style.opacity = '0.6';
+                label.title = 'Automatically assigned via Admin status';
+              }
+            }
+          } else {
+            adminIndicator.style.display = 'none';
+            if (churchAdminCheckbox) {
+              churchAdminCheckbox.disabled = false;
+              const label = document.querySelector(`label[for="${churchAdminCheckbox.id}"]`);
+              if (label) {
+                label.style.opacity = '1';
+                label.title = '';
+              }
+            }
+          }
+        }
+
+        if (adminCheckbox) {
+          adminCheckbox.addEventListener('change', updateAdminRoleUI);
+          updateAdminRoleUI(); // Initial state
+        }
+      });
+    </script>
+
+    <div class="row" style="display: none;">
+      <!-- Hidden to prevent layout shift -->
+
+      <div class="col-md-6 mb-3">
+        <div class="form-check">
+          {{ form.is_active }}
+          <label class="form-check-label" for="id_is_active">
+            Active
+          </label>
+        </div>
+        <small class="form-text text-muted">Inactive users cannot log in</small>
+      </div>
+    </div>
+
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger">
+        {{ form.non_field_errors }}
+      </div>
+    {% endif %}
+
+    <div class="mt-4">
+      <button type="submit" class="btn btn-primary">Save</button>
+      <a href="{% url 'users_list' %}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

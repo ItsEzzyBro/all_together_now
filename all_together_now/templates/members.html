@@ -38,7 +38,7 @@
                 <div class="col-4">
                   <select name="bulk_action" class="form-select" id="bulk_action_select">
                     <option value="">Select Action...</option>
-                    <option value="delete">Delete Selected Users</option>
+                    <option value="delete">Delete Selected Members</option>
                     <option value="add_to_ministry">Add to Ministry</option>
                     <option value="remove_from_ministry">Remove from Ministry</option>
                     <option value="add_to_family">Add to Family</option>
@@ -111,6 +111,37 @@
                   <td style="white-space: nowrap;">
                     <a href="{% url 'member_edit' member.pk %}" class="btn btn-sm btn-warning">Edit</a>
                     <a href="{% url 'member_delete' member.pk %}" class="btn btn-sm btn-danger">Delete</a>
+                    <button class="btn btn-sm btn-outline-secondary toggle-member-details" data-member-id="{{ member.pk }}">Show Details</button>
+                  </td>
+                </tr>
+                <tr id="member-details-{{ member.pk }}" class="member-details-row" style="display: none;">
+                  <td colspan="7" style="background-color: #f8f9fa; padding: 15px;">
+                    <div class="row">
+                      <div class="col-md-6">
+                        <p><strong>Full Name:</strong> {{ member.first_name }} {{ member.last_name }}</p>
+                        <p><strong>Email:</strong> {{ member.email|default:'—' }}</p>
+                        <p><strong>Phone:</strong> {{ member.phone_number|default:'—' }}</p>
+                        <p><strong>Gender:</strong> {{ member.get_gender_display|default:'—' }}</p>
+                        <p><strong>Date of Birth:</strong> {% if member.date_of_birth %}{{ member.date_of_birth|date:"M d, Y" }}{% else %}—{% endif %}</p>
+                      </div>
+                      <div class="col-md-6">
+                        <p><strong>Age:</strong> {{ member.age|default:'—' }}</p>
+                        <p><strong>Marital Status:</strong> {{ member.get_marital_status_display|default:'—' }}</p>
+                        <p><strong>Address:</strong> {{ member.address|default:'—' }}</p>
+                        <p><strong>Family:</strong> {{ member.family.family_name|default:'—' }}</p>
+                        <p><strong>Ministries:</strong>
+                          {% with member_ministries=member.church_groups.all %}
+                            {% if member_ministries %}
+                              {% for ministry in member_ministries %}
+                                <span class="badge bg-secondary">{{ ministry.ministry_name }}</span>
+                              {% endfor %}
+                            {% else %}
+                              —
+                            {% endif %}
+                          {% endwith %}
+                        </p>
+                      </div>
+                    </div>
                   </td>
                 </tr>
               {% endfor %}
@@ -220,29 +251,47 @@
                   alert('Please select an action.');
                   return;
                 }
-                // Collect member IDs
+                // Collect member IDs - add each as a separate input field
                 const ids = Array.from(checked).map(cb => cb.value);
-                // Add hidden input with member IDs
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'member_ids';
-                input.value = ids.join(',');
-                bulkForm.appendChild(input);
+                ids.forEach(id => {
+                  const input = document.createElement('input');
+                  input.type = 'hidden';
+                  input.name = 'member_ids';
+                  input.value = id;
+                  bulkForm.appendChild(input);
+                });
               });
             }
 
             // Row click to toggle checkbox
-            const rows = document.querySelectorAll('table tbody tr');
+            const rows = document.querySelectorAll('table tbody tr:not(.member-details-row)');
             rows.forEach(row => {
               row.style.cursor = 'pointer';
               row.addEventListener('click', function(e) {
                 // Don't toggle if user clicked on action buttons
-                if (e.target.closest('a.btn')) {
+                if (e.target.closest('a.btn') || e.target.closest('button.toggle-member-details')) {
                   return;
                 }
                 const checkbox = this.querySelector('.member-checkbox');
                 if (checkbox) {
                   checkbox.checked = !checkbox.checked;
+                }
+              });
+            });
+
+            // Toggle member details functionality
+            document.querySelectorAll('.toggle-member-details').forEach(button => {
+              button.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const memberId = this.getAttribute('data-member-id');
+                const detailsRow = document.getElementById('member-details-' + memberId);
+                
+                if (detailsRow.style.display === 'none') {
+                  detailsRow.style.display = 'table-row';
+                  this.textContent = 'Hide Details';
+                } else {
+                  detailsRow.style.display = 'none';
+                  this.textContent = 'Show Details';
                 }
               });
             });
