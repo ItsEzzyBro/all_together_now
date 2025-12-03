@@ -30,7 +30,7 @@ A problem most small to medium size churches have is managing their church congr
 
 - **Ministry/Church Grouping**: Groups members of the congregation into their respected ministry/church group
   - Also includes the board/leadership members of that ministry/group
-- *8Attendance Check-In for Members**
+- **Attendance Check-In for Members**
   - QR Code and Form Usage
 
 ### Reporting and Analytics
