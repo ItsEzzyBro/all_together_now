@@ -3,8 +3,9 @@ from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from member_management.models import Member, Family, Vistor
-from django.db.models import Q
-from datetime import date, time
+from django.db.models import Q, Count
+from datetime import date, time, timedelta
+from django.utils import timezone 
 from ministry.models import Ministry, MembersAndMinistries
 from attendance.models import Event, EventSchedule, Attendance
 from member_management.forms import MemberForm, FamilyForm, VistorForm
@@ -12,6 +13,10 @@ from ministry.forms import MinistryForm
 from django import forms
 from django.http import JsonResponse, HttpResponseForbidden
 from all_together_now.context_processors import get_user_accessible_ministries
+import json  
+from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth import update_session_auth_hash
+from django.contrib import messages
 
 # ---------- Public pages ----------
 def home(request):
@@ -300,7 +305,114 @@ def event_delete(request, pk):
 
 @login_required
 def analytics_view(request):
-    return render(request, "analytics.html")
+    today = timezone.now().date()
+    last_30 = today - timedelta(days=30)
+
+    # Member stats
+    members_qs = Member.objects.all()
+    total_members = members_qs.count()
+
+    # Gender stats
+    gender_counts = (
+        members_qs
+        .values("gender")
+        .annotate(count=Count("id"))
+        .order_by()
+    )
+    gender_stats = [
+        {
+            "label": gc["gender"] or "Unspecified",
+            "count": gc["count"],
+        }
+        for gc in gender_counts
+    ]
+    gender_labels = [g["label"] for g in gender_stats]
+    gender_values = [g["count"] for g in gender_stats]
+
+    # Age stats
+    age_buckets = {
+        "0–12": members_qs.filter(age__gte=0, age__lte=12).count(),
+        "13–17": members_qs.filter(age__gte=13, age__lte=17).count(),
+        "18–29": members_qs.filter(age__gte=18, age__lte=29).count(),
+        "30–49": members_qs.filter(age__gte=30, age__lte=49).count(),
+        "50+": members_qs.filter(age__gte=50).count(),
+    }
+    age_labels = list(age_buckets.keys())
+    age_values = list(age_buckets.values())
+
+    # Attendance (last 30 days) 
+    attend_last_30 = Attendance.objects.filter(date__gte=last_30)
+
+    total_checkins_30 = attend_last_30.count()
+    unique_events_30 = attend_last_30.values("event").distinct().count()
+
+    if unique_events_30:
+        avg_attendance_30 = round(total_checkins_30 / unique_events_30)
+    else:
+        avg_attendance_30 = 0
+
+    # Recent attendance by date (last 7 dates)
+    recent_attendance = (
+        attend_last_30
+        .values("date")
+        .annotate(count=Count("attendee"))  # attendee is FK to Member
+        .order_by("date")[:7]
+    )
+    attendance_trend = [
+        {
+            "date": row["date"],
+            "count": row["count"],
+        }
+        for row in recent_attendance
+    ]
+    attendance_labels = [row["date"].strftime("%Y-%m-%d") for row in attendance_trend]
+    attendance_values = [row["count"] for row in attendance_trend]
+
+    # Ministry stats 
+    ministries_qs = Ministry.objects.all().order_by("ministry_name")
+
+    ministries_data = []
+    for m in ministries_qs:
+        member_count = (
+            MembersAndMinistries.objects
+            .filter(ministry=m)
+            .values("member")
+            .distinct()
+            .count()
+        )
+        ministries_data.append({
+            "name": m.ministry_name,
+            "member_count": member_count,
+            "is_active": getattr(m, "is_active", True),
+        })
+    ministry_labels = [m["name"] for m in ministries_data]
+    ministry_values = [m["member_count"] for m in ministries_data]
+
+    context = {
+        "summary": {
+            "total_members": total_members,
+            "total_checkins_30": total_checkins_30,
+            "unique_events_30": unique_events_30,
+            "avg_attendance_30": avg_attendance_30,
+        },
+        "attendance_trend": attendance_trend,
+        "gender_stats": gender_stats,
+        "age_buckets": age_buckets,
+        "ministries": ministries_data,
+
+        # Chart.js JSON data
+        "attendance_labels_json": json.dumps(attendance_labels),
+        "attendance_values_json": json.dumps(attendance_values),
+        "gender_labels_json": json.dumps(gender_labels),
+        "gender_values_json": json.dumps(gender_values),
+        "age_labels_json": json.dumps(age_labels),
+        "age_values_json": json.dumps(age_values),
+        "ministry_labels_json": json.dumps(ministry_labels),
+        "ministry_values_json": json.dumps(ministry_values),
+    }
+    return render(request, "analytics.html", context)
+
+
 
 @login_required
 def system_view(request):
@@ -313,8 +425,20 @@ def profile(request):
 
 @login_required
 def change_password(request):
-    # You can wire Django's PasswordChangeView later; placeholder template for now
-    return render(request, "dashboard.html")
+    if request.method == 'POST':
+        form = PasswordChangeForm(request.user, request.POST)
+
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)
+            messages.success(request, 'Password Successfully Updated')
+            
+            return redirect('change_password')
+        else:
+            messages.error(request, "Please Correct Error")
+    else:
+        form = PasswordChangeForm(request.user)
+    return render(request, "change_password.html", {'form': form})
 
 
 # ---------- Member CRUD (user-facing) ----------
