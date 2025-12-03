@@ -10,7 +10,8 @@ from attendance.models import Event, EventSchedule, Attendance
 from member_management.forms import MemberForm, FamilyForm, VistorForm
 from ministry.forms import MinistryForm
 from django import forms
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseForbidden
+from all_together_now.context_processors import get_user_accessible_ministries
 
 # ---------- Public pages ----------
 def home(request):
@@ -36,7 +37,11 @@ def visitors_view(request):
 
 @login_required
 def events_list(request):
-    # Events listing with search and ministry filters
+    # Get ministries the user has access to for action permissions
+    accessible_ministries = get_user_accessible_ministries(request.user)
+    accessible_ministry_ids = list(accessible_ministries.values_list('id', flat=True))
+    
+    # All events are viewable, but all ministries show in filter
     events_qs = Event.objects.all().prefetch_related('schedules').order_by('event_name')
 
     # Search by name
@@ -129,6 +134,7 @@ def events_list(request):
         'selected_weekdays': selected_weekdays,
         'date_from': date_from,
         'date_to': date_to,
+        'accessible_ministry_ids': accessible_ministry_ids,
     }
     return render(request, 'events.html', context)
 
@@ -192,7 +198,8 @@ def event_create(request):
     
     # Get preselected ministry from URL parameter
     preselected_ministry = request.GET.get('ministry', '')
-    ministries = Ministry.objects.all().order_by('ministry_name')
+    # Only show ministries the user has access to
+    ministries = get_user_accessible_ministries(request.user).order_by('ministry_name')
     return render(request, 'event_form.html', {
         'ministries': ministries,
         'action': 'Create',
@@ -202,6 +209,13 @@ def event_create(request):
 @login_required
 def event_edit(request, pk):
     event = Event.objects.get(pk=pk)
+    accessible_ministries = get_user_accessible_ministries(request.user)
+    accessible_ministry_ids = list(accessible_ministries.values_list('id', flat=True))
+    
+    # Check if user has permission to edit this event (if it has a ministry)
+    if event.ministry and event.ministry.id not in accessible_ministry_ids:
+        return HttpResponseForbidden("You don't have permission to edit this event.")
+    
     if request.method == 'POST':
         event.event_name = request.POST.get('event_name', '').strip()
         event.event_description = request.POST.get('event_description', '').strip()
@@ -209,6 +223,9 @@ def event_edit(request, pk):
         event.is_active = request.POST.get('is_active') == 'on'
         
         if ministry_id:
+            # Verify user has access to the selected ministry
+            if int(ministry_id) not in accessible_ministry_ids:
+                return HttpResponseForbidden("You don't have permission to assign this ministry.")
             event.ministry = Ministry.objects.get(pk=ministry_id)
         else:
             event.ministry = None
@@ -256,7 +273,8 @@ def event_edit(request, pk):
         
         return redirect('events')
     
-    ministries = Ministry.objects.all().order_by('ministry_name')
+    # Only show ministries the user has access to
+    ministries = accessible_ministries.order_by('ministry_name')
     existing_schedules = EventSchedule.objects.filter(event=event).order_by('id')
     return render(request, 'event_form.html', {
         'event': event,
@@ -268,6 +286,13 @@ def event_edit(request, pk):
 @login_required
 def event_delete(request, pk):
     event = Event.objects.get(pk=pk)
+    accessible_ministries = get_user_accessible_ministries(request.user)
+    accessible_ministry_ids = list(accessible_ministries.values_list('id', flat=True))
+    
+    # Check if user has permission to delete this event (if it has a ministry)
+    if event.ministry and event.ministry.id not in accessible_ministry_ids:
+        return HttpResponseForbidden("You don't have permission to delete this event.")
+    
     if request.method == 'POST':
         event.delete()
         return redirect('events')
@@ -295,6 +320,10 @@ def change_password(request):
 # ---------- Member CRUD (user-facing) ----------
 @login_required
 def members_list(request):
+    # Get ministries the user has access to
+    accessible_ministries = get_user_accessible_ministries(request.user)
+    accessible_ministry_ids = list(accessible_ministries.values_list('id', flat=True))
+    
     # Handle bulk actions
     if request.method == 'POST':
         action = request.POST.get('bulk_action')
@@ -307,7 +336,8 @@ def members_list(request):
                 return redirect(reverse('members_view') + f'?bulk_action=delete')
             elif action == 'add_to_ministry':
                 ministry_id = request.POST.get('ministry_id')
-                if ministry_id:
+                # Only allow if user has access to this ministry
+                if ministry_id and int(ministry_id) in accessible_ministry_ids:
                     ministry = Ministry.objects.get(pk=ministry_id)
                     for member in members_qs:
                         MembersAndMinistries.objects.get_or_create(member=member, ministry=ministry)
@@ -315,7 +345,8 @@ def members_list(request):
                 return redirect(reverse('members_view') + f'?bulk_action=add_to_ministry&ministry_id={ministry_id}')
             elif action == 'remove_from_ministry':
                 ministry_id = request.POST.get('ministry_id')
-                if ministry_id:
+                # Only allow if user has access to this ministry
+                if ministry_id and int(ministry_id) in accessible_ministry_ids:
                     MembersAndMinistries.objects.filter(member__in=members_qs, ministry_id=ministry_id).delete()
                 return redirect(reverse('members_view') + f'?bulk_action=remove_from_ministry&ministry_id={ministry_id}')
             elif action == 'add_to_family':
@@ -328,8 +359,31 @@ def members_list(request):
                 members_qs.update(family=None)
                 return redirect(reverse('members_view') + f'?bulk_action=remove_from_family')
 
-    # Queryset
-    qs = Member.objects.all().order_by('last_name', 'first_name')
+    # Queryset - filter to show only members from accessible ministries
+    # Church Administrators see ALL members
+    # Others see only members from ministries they have access to
+    from member_management.models import UsersAndRoles, Role
+    try:
+        church_admin_role = Role.objects.get(role_name="Church Administrator")
+        is_church_admin = UsersAndRoles.objects.filter(
+            user=request.user, 
+            role=church_admin_role
+        ).exists()
+    except Role.DoesNotExist:
+        is_church_admin = False
+    
+    if is_church_admin:
+        # Church Administrator sees ALL members
+        qs = Member.objects.all().order_by('last_name', 'first_name')
+    elif accessible_ministry_ids:
+        # Other users see only members from their accessible ministries
+        member_ids = MembersAndMinistries.objects.filter(
+            ministry_id__in=accessible_ministry_ids
+        ).values_list('member_id', flat=True).distinct()
+        qs = Member.objects.filter(id__in=member_ids).order_by('last_name', 'first_name')
+    else:
+        # No accessible ministries
+        qs = Member.objects.none()
 
     # Search
     q = request.GET.get('q', '').strip()
@@ -382,8 +436,8 @@ def members_list(request):
 
         members_list = [m for m in members_list if in_ranges(getattr(m, 'age', None), age_ranges)]
 
-    # available ministries for UI
-    ministries = Ministry.objects.all().order_by('ministry_name')
+    # Only show accessible ministries in the filter
+    ministries = accessible_ministries.order_by('ministry_name')
     families = Family.objects.all().order_by('family_name')
 
     context = {
@@ -396,6 +450,7 @@ def members_list(request):
         'ministries': ministries,
         'selected_ministries': selected_ministries,
         'available_families': families,
+        'accessible_ministry_ids': accessible_ministry_ids,
     }
     return render(request, 'members.html', context)
 
@@ -449,8 +504,17 @@ def member_delete(request, pk):
 # ---------- Ministry CRUD (user-facing) ----------
 @login_required
 def ministries_list(request):
+    # All ministries are viewable
     ministries = Ministry.objects.all().order_by('ministry_name')
-    return render(request, 'ministries.html', {'ministries': ministries})
+    
+    # But only certain actions are available based on user's roles
+    accessible_ministries = get_user_accessible_ministries(request.user)
+    accessible_ministry_ids = list(accessible_ministries.values_list('id', flat=True))
+    
+    return render(request, 'ministries.html', {
+        'ministries': ministries,
+        'accessible_ministry_ids': accessible_ministry_ids,
+    })
 
 
 @login_required
@@ -468,6 +532,12 @@ def ministry_create(request):
 @login_required
 def ministry_edit(request, pk):
     ministry = Ministry.objects.get(pk=pk)
+    accessible_ministries = get_user_accessible_ministries(request.user)
+    
+    # Check if user has permission to edit this ministry
+    if ministry not in accessible_ministries:
+        return HttpResponseForbidden("You don't have permission to edit this ministry.")
+    
     if request.method == 'POST':
         form = MinistryForm(request.POST, instance=ministry)
         if form.is_valid():
@@ -481,6 +551,12 @@ def ministry_edit(request, pk):
 @login_required
 def ministry_delete(request, pk):
     ministry = Ministry.objects.get(pk=pk)
+    accessible_ministries = get_user_accessible_ministries(request.user)
+    
+    # Check if user has permission to delete this ministry
+    if ministry not in accessible_ministries:
+        return HttpResponseForbidden("You don't have permission to delete this ministry.")
+    
     if request.method == 'POST':
         ministry.delete()
         return redirect('ministries')
@@ -620,4 +696,285 @@ def event_qr_code_data(request, event_id):
         'qr_code': qr_code_base64,
         'attendance_url': attendance_url,
     })
+
+
+# ---------- Users Management (staff-only) ----------
+@login_required
+def users_list(request):
+    """Users list with search, filters, and bulk actions"""
+    from django.contrib.auth.models import User
+    from member_management.models import UserProfile, Role, UsersAndRoles, RolesAndMinistries
+    
+    # Bulk actions
+    if request.method == 'POST':
+        action = request.POST.get('bulk_action')
+        selected_ids = request.POST.get('user_ids', '').split(',')
+        if selected_ids and selected_ids[0]:
+            users_qs = User.objects.filter(id__in=selected_ids)
+            if action == 'delete':
+                users_qs.delete()
+                return redirect(reverse('users_list') + '?bulk_action=delete')
+            elif action == 'deactivate':
+                users_qs.update(is_active=False)
+                return redirect(reverse('users_list') + '?bulk_action=deactivate')
+            elif action == 'activate':
+                users_qs.update(is_active=True)
+                return redirect(reverse('users_list') + '?bulk_action=activate')
+            elif action == 'add_role':
+                role_id = request.POST.get('role_id')
+                if role_id:
+                    role = Role.objects.get(pk=role_id)
+                    for user in users_qs:
+                        UsersAndRoles.objects.get_or_create(user=user, role=role)
+                return redirect(reverse('users_list') + f'?bulk_action=add_role&role_id={role_id}')
+            elif action == 'remove_role':
+                role_id = request.POST.get('role_id')
+                if role_id:
+                    UsersAndRoles.objects.filter(user__in=users_qs, role_id=role_id).delete()
+                return redirect(reverse('users_list') + f'?bulk_action=remove_role&role_id={role_id}')
+
+    # Queryset
+    qs = User.objects.select_related('profile').prefetch_related('user_roles__role').order_by('username')
+
+    # Search
+    q = request.GET.get('q', '').strip()
+    if q:
+        qs = qs.filter(
+            Q(username__icontains=q) |
+            Q(profile__member__first_name__icontains=q) |
+            Q(profile__member__last_name__icontains=q) |
+            Q(profile__member__email__icontains=q)
+        )
+
+    # Ministry filter (based on roles' ministry access)
+    selected_ministries = request.GET.getlist('ministry')
+    if selected_ministries and 'all' not in selected_ministries:
+        try:
+            mids = [int(x) for x in selected_ministries]
+        except ValueError:
+            mids = []
+        if mids:
+            # Get roles that have access to these ministries
+            role_ids = RolesAndMinistries.objects.filter(ministry__in=mids).values_list('role_id', flat=True)
+            # Get users with these roles
+            user_ids = UsersAndRoles.objects.filter(role__in=role_ids).values_list('user_id', flat=True)
+            qs = qs.filter(id__in=user_ids)
+
+    # Role filter
+    selected_roles = request.GET.getlist('role')
+    if selected_roles and 'all' not in selected_roles:
+        try:
+            rids = [int(x) for x in selected_roles]
+        except ValueError:
+            rids = []
+        if rids:
+            user_ids = UsersAndRoles.objects.filter(role__in=rids).values_list('user_id', flat=True)
+            qs = qs.filter(id__in=user_ids)
+
+    # Status filter
+    status_filter = request.GET.get('status', '')
+    if status_filter == 'active':
+        qs = qs.filter(is_active=True)
+    elif status_filter == 'inactive':
+        qs = qs.filter(is_active=False)
+    elif status_filter == 'staff':
+        qs = qs.filter(is_staff=True)
+
+    users_list = list(qs)
+    
+    # Annotate users with their roles (Church Administrator first, then alphabetical)
+    from django.db.models import Case, When, Value, IntegerField
+    for user in users_list:
+        user.role_list = UsersAndRoles.objects.filter(user=user).select_related('role').annotate(
+            custom_order=Case(
+                When(role__role_name='Church Administrator', then=Value(0)),
+                default=Value(1),
+                output_field=IntegerField()
+            )
+        ).order_by('custom_order', 'role__role_name')
+
+    ministries = Ministry.objects.all().order_by('ministry_name')
+    
+    # Custom ordering: Church Administrator first, then alphabetical
+    roles = Role.objects.all().annotate(
+        custom_order=Case(
+            When(role_name='Church Administrator', then=Value(0)),
+            default=Value(1),
+            output_field=IntegerField()
+        )
+    ).order_by('custom_order', 'role_name')
+
+    context = {
+        'users': users_list,
+        'query': q,
+        'ministries': ministries,
+        'selected_ministries': selected_ministries,
+        'roles': roles,
+        'selected_roles': selected_roles,
+        'status_filter': status_filter,
+    }
+    return render(request, 'users.html', context)
+
+
+@login_required
+def user_create(request):
+    """Create a new user with password, member association, and roles"""
+    from django.contrib.auth.models import User
+    from member_management.user_forms import UserCreateForm
+    from member_management.models import UsersAndRoles, Role, RolesAndMinistries
+    
+    if request.method == 'POST':
+        form = UserCreateForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.set_password(form.cleaned_data['password'])
+            user.save()
+            
+            # If Admin (staff) is checked, ensure "Church Administrator" role is assigned
+            admin_role, _ = Role.objects.get_or_create(role_name="Church Administrator")
+            if user.is_staff:
+                UsersAndRoles.objects.get_or_create(user=user, role=admin_role)
+            
+            # Assign other selected roles (Church Administrator may already be assigned above)
+            roles = form.cleaned_data.get('roles', [])
+            for role in roles:
+                UsersAndRoles.objects.get_or_create(user=user, role=role)
+            
+            return redirect('users_list')
+    else:
+        form = UserCreateForm()
+    
+    return render(request, 'user_form.html', {'form': form, 'action': 'Create'})
+
+
+@login_required
+def user_edit(request, pk):
+    """Edit an existing user (no password change here)"""
+    from django.contrib.auth.models import User
+    from member_management.user_forms import UserEditForm
+    from member_management.models import UsersAndRoles, Role, RolesAndMinistries
+    
+    user = User.objects.get(pk=pk)
+    
+    if request.method == 'POST':
+        form = UserEditForm(request.POST, instance=user)
+        if form.is_valid():
+            # Ensure superuser always has active and admin status
+            if user.is_superuser:
+                user.is_active = True
+                user.is_staff = True
+            form.save()
+            
+            # Handle Admin correlation first
+            admin_role, _ = Role.objects.get_or_create(role_name="Church Administrator")
+            
+            # Update roles: remove all and re-add selected
+            UsersAndRoles.objects.filter(user=user).delete()
+            
+            # If Admin (staff) is checked, ensure Church Administrator is assigned
+            if user.is_staff:
+                UsersAndRoles.objects.get_or_create(user=user, role=admin_role)
+            
+            # Assign other selected roles
+            roles = form.cleaned_data.get('roles', [])
+            for role in roles:
+                # Only add Church Administrator from manual selection if staff is NOT checked
+                # (to avoid confusion - staff status takes precedence)
+                if role == admin_role and user.is_staff:
+                    continue  # Already added above
+                UsersAndRoles.objects.get_or_create(user=user, role=role)
+            
+            return redirect('users_list')
+    else:
+        form = UserEditForm(instance=user)
+        # Pre-populate roles
+        form.fields['roles'].initial = UsersAndRoles.objects.filter(user=user).values_list('role_id', flat=True)
+    
+    return render(request, 'user_form.html', {'form': form, 'action': 'Edit', 'user': user})
+
+
+@login_required
+def user_delete(request, pk):
+    """Delete a user"""
+    from django.contrib.auth.models import User
+    
+    user = User.objects.get(pk=pk)
+    if request.method == 'POST':
+        user.delete()
+        return redirect('users_list')
+    
+    return render(request, 'user_confirm_delete.html', {'user_obj': user})
+
+
+@login_required
+def role_create(request):
+    """Create a new role with ministry access"""
+    from member_management.user_forms import RoleForm
+    from member_management.models import Role, RolesAndMinistries
+    
+    if request.method == 'POST':
+        form = RoleForm(request.POST)
+        if form.is_valid():
+            role = form.save()
+            
+            # Assign ministries
+            ministries = form.cleaned_data.get('ministries', [])
+            for ministry in ministries:
+                RolesAndMinistries.objects.create(role=role, ministry=ministry)
+            
+            return redirect('users_list')
+    else:
+        form = RoleForm()
+    
+    return render(request, 'role_form.html', {'form': form, 'action': 'Create'})
+
+
+@login_required
+def role_edit(request, pk):
+    """Edit an existing role and its ministry access"""
+    from member_management.user_forms import RoleForm
+    from member_management.models import Role, RolesAndMinistries
+    
+    role = Role.objects.get(pk=pk)
+    
+    if request.method == 'POST':
+        form = RoleForm(request.POST, instance=role)
+        if form.is_valid():
+            # Prevent renaming Church Administrator role
+            if role.role_name == "Church Administrator" and form.cleaned_data.get('role_name') != "Church Administrator":
+                # keep original name
+                form.instance.role_name = "Church Administrator"
+                form.save()
+            else:
+                form.save()
+            
+            # Update ministries: remove all and re-add selected
+            RolesAndMinistries.objects.filter(role=role).delete()
+            ministries = form.cleaned_data.get('ministries', [])
+            for ministry in ministries:
+                RolesAndMinistries.objects.create(role=role, ministry=ministry)
+            
+            return redirect('users_list')
+    else:
+        form = RoleForm(instance=role)
+    
+    return render(request, 'role_form.html', {'form': form, 'action': 'Edit', 'role': role})
+
+
+@login_required
+def role_delete(request, pk):
+    """Delete a role"""
+    from member_management.models import Role
+    
+    role = Role.objects.get(pk=pk)
+    # Protect Church Administrator from deletion
+    if role.role_name == "Church Administrator":
+        return redirect('users_list')
+    if request.method == 'POST':
+        role.delete()
+        return redirect('users_list')
+    
+    return render(request, 'role_confirm_delete.html', {'role': role})
+
+
 # ---------- Event CRUD (user-facing) ----------

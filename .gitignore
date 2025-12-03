@@ -10,6 +10,7 @@ pip-delete-this-arg.txt
 # Django specific
 /static_root/
 /media/
+db.sqlite3
 
 # IDE and OS Files
 .DS_Store

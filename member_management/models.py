@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 from datetime import date
 from dateutil.relativedelta import relativedelta
 
@@ -84,3 +85,53 @@ class Vistor(models.Model):
     class Meta:
         verbose_name = "Vistor"
         verbose_name_plural = "Vistors"
+
+
+# ---- Accounts, Roles, and Access Control ----
+class Role(models.Model):
+    role_name = models.CharField(max_length=100, unique=True)
+
+    class Meta:
+        verbose_name = "Role"
+        verbose_name_plural = "Roles"
+
+    def __str__(self) -> str:
+        return self.role_name
+
+
+class RolesAndMinistries(models.Model):
+    role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name="role_ministries")
+    ministry = models.ForeignKey('ministry.Ministry', on_delete=models.CASCADE, related_name="ministry_roles")
+
+    class Meta:
+        unique_together = ("role", "ministry")
+        verbose_name = "Role-Ministry Access"
+        verbose_name_plural = "Roles-Ministries Access"
+
+    def __str__(self) -> str:
+        return f"{self.role} -> {self.ministry}"
+
+
+class UsersAndRoles(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="user_roles")
+    role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name="role_users")
+
+    class Meta:
+        unique_together = ("user", "role")
+        verbose_name = "User-Role Assignment"
+        verbose_name_plural = "Users-Roles Assignments"
+
+    def __str__(self) -> str:
+        return f"{self.user.username} -> {self.role.role_name}"
+
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
+    member = models.ForeignKey('Member', on_delete=models.SET_NULL, null=True, blank=True, unique=True)
+
+    class Meta:
+        verbose_name = "User Profile"
+        verbose_name_plural = "User Profiles"
+
+    def __str__(self) -> str:
+        return f"Profile for {self.user.username}"

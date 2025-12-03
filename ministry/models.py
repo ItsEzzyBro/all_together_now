@@ -16,6 +16,17 @@ class Ministry(models.Model):
     def __str__(self):
         return self.ministry_name
     
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Ensure Church Administrator role has access to this ministry
+        try:
+            from member_management.models import Role, RolesAndMinistries
+            admin_role, _ = Role.objects.get_or_create(role_name="Church Administrator")
+            RolesAndMinistries.objects.get_or_create(role=admin_role, ministry=self)
+        except Exception:
+            # Silently pass if models aren't ready yet (e.g., during migrations)
+            pass
+    
 class MembersAndMinistries(models.Model):
     member = models.ForeignKey(Member, on_delete = models.CASCADE)
     ministry = models.ForeignKey(Ministry, on_delete = models.CASCADE)

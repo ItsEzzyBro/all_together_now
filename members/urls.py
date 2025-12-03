@@ -39,4 +39,15 @@ urlpatterns = [
     path("attendance/<int:event_id>/", views.attendance_form, name="attendance_form"),
     path("attendance/<int:event_id>/mark/", views.mark_attendance, name="mark_attendance"),
     path("events/<int:event_id>/qr_data/", views.event_qr_code_data, name="event_qr_code_data"),
+    
+    # Users Management (staff-only)
+    path("users/", views.users_list, name="users_list"),
+    path("users/new/", views.user_create, name="user_create"),
+    path("users/<int:pk>/edit/", views.user_edit, name="user_edit"),
+    path("users/<int:pk>/delete/", views.user_delete, name="user_delete"),
+    
+    # Roles Management
+    path("roles/new/", views.role_create, name="role_create"),
+    path("roles/<int:pk>/edit/", views.role_edit, name="role_edit"),
+    path("roles/<int:pk>/delete/", views.role_delete, name="role_delete"),
 ]
