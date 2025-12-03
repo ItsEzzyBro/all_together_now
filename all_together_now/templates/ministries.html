@@ -10,20 +10,20 @@
 
   {% if ministries %}
     <div class="table-responsive">
-      <table class="table table-hover table-striped">
+      <table class="table table-hover table-striped align-middle">
         <thead class="table-dark">
           <tr>
             <th>Ministry Name</th>
             <th>Leader</th>
             <th>Status</th>
-            <th>Actions</th>
+            <th style="width: 650px; min-width: 650px;">Actions</th>
           </tr>
         </thead>
         <tbody>
           {% for ministry in ministries %}
             <tr>
-              <td><strong>{{ ministry.ministry_name }}</strong></td>
-              <td>{{ ministry.leader|default:"—" }}</td>
+              <td title="{{ ministry.ministry_name }}" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: help;"><strong>{{ ministry.ministry_name }}</strong></td>
+              <td title="{{ ministry.leader|default:'' }}" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: help;">{{ ministry.leader|default:"—" }}</td>
               <td>
                 {% if ministry.is_active %}
                   <span class="badge bg-success">Active</span>
@@ -31,14 +31,13 @@
                   <span class="badge bg-secondary">Inactive</span>
                 {% endif %}
               </td>
-              <td>
+              <td style="white-space: nowrap;">
                 <a href="{% url 'ministry_edit' ministry.pk %}" class="btn btn-sm btn-warning">Edit</a>
                 <a href="{% url 'ministry_delete' ministry.pk %}" class="btn btn-sm btn-danger">Delete</a>
                 <a href="{% url 'members_view' %}?bulk_action=add_to_ministry&ministry_id={{ ministry.pk }}" class="btn btn-sm btn-success">Add member</a>
                 <a href="{% url 'members_view' %}?bulk_action=remove_from_ministry&ministry_id={{ ministry.pk }}" class="btn btn-sm btn-danger">Remove members</a>
                 <a href="{% url 'events' %}?ministry={{ ministry.pk }}" class="btn btn-sm btn-primary">View Events</a>
                 <a href="{% url 'event_create' %}?ministry={{ ministry.pk }}" class="btn btn-sm btn-info">Create Event</a>
-
               </td>
             </tr>
           {% endfor %}

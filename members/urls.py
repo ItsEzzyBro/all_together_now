@@ -34,4 +34,9 @@ urlpatterns = [
     path("ministries/new/", views.ministry_create, name="ministry_create"),
     path("ministries/<int:pk>/edit/", views.ministry_edit, name="ministry_edit"),
     path("ministries/<int:pk>/delete/", views.ministry_delete, name="ministry_delete"),
+    
+    # Attendance Tracking (public access)
+    path("attendance/<int:event_id>/", views.attendance_form, name="attendance_form"),
+    path("attendance/<int:event_id>/mark/", views.mark_attendance, name="mark_attendance"),
+    path("events/<int:event_id>/qr_data/", views.event_qr_code_data, name="event_qr_code_data"),
 ]

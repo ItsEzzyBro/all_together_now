@@ -15,6 +15,6 @@ class EventScheduleAdmin(admin.ModelAdmin):
 
 @admin.register(Attendance)
 class AttendanceAdmin(admin.ModelAdmin):
-	list_display = ("attendee", "event", "date", "status")
-	list_filter = ("status", "date")
+	list_display = ("attendee", "event", "date")
+	list_filter = ("date", "event")
 	search_fields = ("attendee__first_name", "attendee__last_name", "event__event_name")

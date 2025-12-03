@@ -102,17 +102,10 @@ class Attendance(models.Model):
     attendee = models.ForeignKey(Member, on_delete = models.CASCADE, related_name = 'attendance_records')
     event = models.ForeignKey(Event, on_delete = models.CASCADE, related_name = "attendance_records")
 
-    status_choices = [
-        ("P", "Present"),
-        ("A", "Absent")
-    ]
-
-    status = models.CharField(max_length = 1, choices = status_choices, default = 'P')
-
     class Meta:
         unique_together = ("attendee", "event")
         verbose_name = "Attendance Record"
         verbose_name_plural = "Attendance Records"
 
     def __str__(self):
-        return f"{self.attendee.first_name} {self.attendee.last_name} - {self.event.event_name} ({self.status})"
+        return f"{self.attendee.first_name} {self.attendee.last_name} - {self.event.event_name} (Present)"

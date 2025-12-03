@@ -83,7 +83,7 @@
         </div>
 
         <div class="table-responsive">
-          <table class="table table-hover table-striped">
+          <table class="table table-hover table-striped align-middle">
             <thead class="table-dark">
               <tr>
                 <th style="width: 50px;">
@@ -94,7 +94,7 @@
                 <th>Phone</th>
                 <th>Age</th>
                 <th>Family</th>
-                <th>Actions</th>
+                <th style="width: 180px; min-width: 180px;">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -103,12 +103,12 @@
                   <td>
                     <input type="checkbox" class="form-check-input member-checkbox" value="{{ member.pk }}" data-member-id="{{ member.pk }}">
                   </td>
-                  <td><strong>{{ member.first_name }} {{ member.last_name }}</strong></td>
-                  <td>{{ member.email|default:"—" }}</td>
+                  <td title="{{ member.first_name }} {{ member.last_name }}" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: help;"><strong>{{ member.first_name }} {{ member.last_name }}</strong></td>
+                  <td title="{{ member.email|default:'' }}" style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: help;">{{ member.email|default:"—" }}</td>
                   <td>{{ member.phone_number|default:"—" }}</td>
                   <td>{{ member.age|default:"—" }}</td>
-                  <td>{{ member.family.family_name|default:"—" }}</td>
-                  <td>
+                  <td title="{{ member.family.family_name|default:'' }}" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: help;">{{ member.family.family_name|default:"—" }}</td>
+                  <td style="white-space: nowrap;">
                     <a href="{% url 'member_edit' member.pk %}" class="btn btn-sm btn-warning">Edit</a>
                     <a href="{% url 'member_delete' member.pk %}" class="btn btn-sm btn-danger">Delete</a>
                   </td>
@@ -119,7 +119,7 @@
         </div>
 
         <script>
-          (function(){
+          document.addEventListener('DOMContentLoaded', function() {
             const selectAll = document.getElementById('select_all_members');
             const checkboxes = document.querySelectorAll('.member-checkbox');
             const bulkForm = document.getElementById('bulk_actions_form');
@@ -246,7 +246,19 @@
                 }
               });
             });
-          })();
+
+            // Ministry filter "All Members" checkbox logic
+            const allCb = document.getElementById('ministry_all');
+            const ministryCheckboxes = document.querySelectorAll('.ministry-checkbox');
+            if (allCb) {
+              function updateMinistryCheckboxes() {
+                const disabled = allCb.checked;
+                ministryCheckboxes.forEach(b => b.disabled = disabled);
+              }
+              allCb.addEventListener('change', updateMinistryCheckboxes);
+              updateMinistryCheckboxes();
+            }
+          });
         </script>
       {% else %}
         <div class="alert alert-info">
@@ -278,21 +290,6 @@
               {% empty %}
                 <div class="text-muted">No ministries defined</div>
               {% endfor %}
-              <script>
-                (function(){
-                  const allCb = document.getElementById('ministry_all');
-                  const boxes = document.querySelectorAll('.ministry-checkbox');
-                  function update(){
-                    const disabled = allCb.checked;
-                    boxes.forEach(b => b.disabled = disabled);
-                  }
-                  if(allCb){
-                    allCb.addEventListener('change', update);
-                    update();
-                  }
-                })();
-              </script>
-
             </div>
 
             <div class="mb-3">

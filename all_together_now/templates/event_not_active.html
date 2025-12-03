@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Event Not Active{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6 text-center">
+      <div class="card shadow">
+        <div class="card-body p-5">
+          <i class="bi bi-clock-history text-warning" style="font-size: 4rem;"></i>
+          <h2 class="mt-4 mb-3">Event Not Currently Taking Attendance</h2>
+          <p class="text-muted mb-4">
+            This event is not accepting attendance at this time. Attendance can only be marked within 1 hour before the event starts and 1 hour after it ends.
+          </p>
+          {% if event %}
+            <div class="alert alert-info">
+              <strong>{{ event.event_name }}</strong>
+              {% if next_schedule %}
+                <br>
+                <small>Next scheduled: {{ next_schedule }}</small>
+              {% endif %}
+            </div>
+          {% endif %}
+          {% if show_return_button %}
+            <a href="{% url 'events' %}" class="btn btn-primary mt-3">Return to Events</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -10,6 +10,7 @@ from attendance.models import Event, EventSchedule, Attendance
 from member_management.forms import MemberForm, FamilyForm, VistorForm
 from ministry.forms import MinistryForm
 from django import forms
+from django.http import JsonResponse
 
 # ---------- Public pages ----------
 def home(request):
@@ -485,4 +486,138 @@ def ministry_delete(request, pk):
         return redirect('ministries')
     return render(request, 'ministry_confirm_delete.html', {'ministry': ministry})
 
+
+# ---------- Attendance Tracking ----------
+def attendance_form(request, event_id):
+    """
+    Public attendance form - no authentication required
+    Shows member list filtered by ministry if event has one
+    Only accessible within 1 hour before/after event schedule
+    """
+    from datetime import datetime, timedelta
+    import base64
+    import io
+    
+    event = Event.objects.select_related('ministry').prefetch_related('schedules').get(pk=event_id)
+    current_dt = datetime.now()
+    
+    # Check if any schedule is currently accepting attendance (with 1 hour buffer)
+    is_accepting = False
+    for schedule in event.schedules.all():
+        # Get the open and close times
+        open_time = schedule.open_time
+        close_time = schedule.close_time
+        
+        # Check if this schedule applies to current date/weekday
+        schedule_applies = False
+        if schedule.date:
+            # One-time event
+            if current_dt.date() == schedule.date:
+                schedule_applies = True
+        elif schedule.weekday is not None:
+            # Recurring event
+            if current_dt.weekday() == schedule.weekday:
+                schedule_applies = True
+        
+        if schedule_applies:
+            # Create datetime objects for open and close times (1 hour buffer)
+            open_dt = datetime.combine(current_dt.date(), open_time) - timedelta(hours=1)
+            close_dt = datetime.combine(current_dt.date(), close_time) + timedelta(hours=1)
+            
+            # Handle events that cross midnight
+            if close_time < open_time:
+                close_dt += timedelta(days=1)
+            
+            if open_dt <= current_dt <= close_dt:
+                is_accepting = True
+                break
+    
+    if not is_accepting:
+        # Show "event not active" page
+        # Show return button only if user is authenticated (came from events list, not QR scan)
+        return render(request, 'event_not_active.html', {
+            'event': event,
+            'show_return_button': request.user.is_authenticated
+        })
+    
+    # Get members - filter by ministry if event has one
+    if event.ministry:
+        # Get members of this ministry
+        member_ministry_relations = MembersAndMinistries.objects.filter(
+            ministry=event.ministry
+        ).select_related('member', 'member__family')
+        members = [rel.member for rel in member_ministry_relations]
+    else:
+        # All members
+        members = Member.objects.select_related('family').all().order_by('first_name', 'last_name')
+    
+    context = {
+        'event': event,
+        'members': members,
+    }
+    return render(request, 'attendance_form.html', context)
+
+
+def mark_attendance(request, event_id):
+    """
+    Process attendance submission - no authentication required
+    """
+    from datetime import datetime
+    from django.contrib import messages
+    
+    if request.method == 'POST':
+        member_id = request.POST.get('member_id')
+        event = Event.objects.get(pk=event_id)
+        member = Member.objects.get(pk=member_id)
+        
+        # Create or update attendance record (silently handle duplicates)
+        attendance, created = Attendance.objects.get_or_create(
+            attendee=member,
+            event=event,
+            defaults={
+                'date': datetime.now().date()
+            }
+        )
+        
+        if not created:
+            # Already marked - update date but show same success message
+            attendance.date = datetime.now().date()
+            attendance.save()
+        
+        # Same message whether new or duplicate - don't reveal attendance status
+        messages.success(request, 'Attendance recorded successfully!')
+        return redirect('attendance_form', event_id=event_id)
+    
+    return redirect('attendance_form', event_id=event_id)
+
+
+@login_required
+def event_qr_code_data(request, event_id):
+    """Return QR code as base64 PNG via JSON for in-page print overlay."""
+    import qrcode
+    import base64
+    from io import BytesIO
+    
+    event = Event.objects.get(pk=event_id)
+    attendance_url = request.build_absolute_uri(reverse('attendance_form', args=[event_id]))
+    
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(attendance_url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    buffer = BytesIO()
+    img.save(buffer, format='PNG')
+    buffer.seek(0)
+    qr_code_base64 = base64.b64encode(buffer.getvalue()).decode()
+    
+    return JsonResponse({
+        'event_name': event.event_name,
+        'qr_code': qr_code_base64,
+        'attendance_url': attendance_url,
+    })
 # ---------- Event CRUD (user-facing) ----------

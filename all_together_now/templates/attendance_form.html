@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}Mark Attendance - {{ event.event_name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-3">
+  <!-- Event Header -->
+  <div class="text-center mb-4">
+    <h2 class="text-primary">{{ event.event_name }}</h2>
+    {% if event.ministry %}
+      <p class="text-muted">{{ event.ministry.ministry_name }}</p>
+    {% endif %}
+  </div>
+
+  <!-- Search Bar -->
+  <div class="mb-4">
+    <input type="text" id="memberSearch" class="form-control form-control-lg" placeholder="Search by name or family...">
+  </div>
+
+  <!-- Member List -->
+  <div class="list-group" id="memberList">
+    {% for member in members %}
+      <button type="button" class="list-group-item list-group-item-action member-item" data-member-id="{{ member.id }}" data-member-name="{{ member.first_name }} {{ member.last_name }}">
+        <div class="d-flex w-100 justify-content-between align-items-center">
+          <div>
+            <h6 class="mb-1">{{ member.first_name }} {{ member.last_name }}</h6>
+            {% if member.family %}
+              <small class="text-muted">{{ member.family.family_name }} Family</small>
+            {% endif %}
+          </div>
+          <i class="bi bi-chevron-right text-muted"></i>
+        </div>
+      </button>
+    {% empty %}
+      <div class="alert alert-info">
+        No members found for this event.
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirm Attendance</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>Mark <strong id="confirmMemberName"></strong> as present for <strong>{{ event.event_name }}</strong>?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form method="POST" action="{% url 'mark_attendance' event.id %}" id="attendanceForm">
+          {% csrf_token %}
+          <input type="hidden" name="member_id" id="selectedMemberId">
+          <button type="submit" class="btn btn-primary">Confirm</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Success Toast -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+  <div id="successToast" class="toast align-items-center text-white bg-success border-0" role="alert">
+    <div class="d-flex">
+      <div class="toast-body">
+        Attendance marked successfully!
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .member-item {
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .member-item:hover {
+    background-color: #f8f9fa;
+    border-left: 4px solid #0d6efd;
+  }
+  .member-item:active {
+    transform: scale(0.98);
+  }
+  
+  /* Mobile friendly spacing */
+  @media (max-width: 768px) {
+    .container {
+      padding-left: 10px;
+      padding-right: 10px;
+    }
+  }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Search functionality
+  document.getElementById('memberSearch').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const members = document.querySelectorAll('.member-item');
+    
+    members.forEach(member => {
+      const text = member.textContent.toLowerCase();
+      if (text.includes(searchTerm)) {
+        member.style.display = '';
+      } else {
+        member.style.display = 'none';
+      }
+    });
+  });
+
+  // Confirmation modal
+  const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+  const memberItems = document.querySelectorAll('.member-item');
+  
+  memberItems.forEach(item => {
+    item.addEventListener('click', function() {
+      const memberId = this.dataset.memberId;
+      const memberName = this.dataset.memberName;
+      
+      document.getElementById('selectedMemberId').value = memberId;
+      document.getElementById('confirmMemberName').textContent = memberName;
+      
+      confirmModal.show();
+    });
+  });
+
+  // Show success message if redirected after successful submission
+  {% if messages %}
+    {% for message in messages %}
+      {% if message.tags == 'success' %}
+        const successToast = new bootstrap.Toast(document.getElementById('successToast'));
+        successToast.show();
+      {% endif %}
+    {% endfor %}
+  {% endif %}
+});
+</script>
+{% endblock %}
