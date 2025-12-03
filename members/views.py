@@ -451,13 +451,18 @@ def change_password(request):
         if form.is_valid():
             user = form.save()
             update_session_auth_hash(request, user)
-            messages.success(request, 'Password Successfully Updated')
+            messages.success(request, 'Your password has been changed successfully!')
             
-            return redirect('change_password')
+            return redirect('dashboard')
         else:
-            messages.error(request, "Please Correct Error")
+            messages.error(request, "Please correct the errors below.")
     else:
         form = PasswordChangeForm(request.user)
+    
+    # Add Bootstrap classes to form fields
+    for field in form.fields.values():
+        field.widget.attrs['class'] = 'form-control'
+    
     return render(request, "change_password.html", {'form': form})
 
 
