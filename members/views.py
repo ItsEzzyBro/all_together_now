@@ -4,10 +4,12 @@ from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from member_management.models import Member, Family, Vistor
 from django.db.models import Q
-from datetime import date
+from datetime import date, time
 from ministry.models import Ministry, MembersAndMinistries
+from attendance.models import Event, EventSchedule, Attendance
 from member_management.forms import MemberForm, FamilyForm, VistorForm
 from ministry.forms import MinistryForm
+from django import forms
 
 # ---------- Public pages ----------
 def home(request):
@@ -32,8 +34,243 @@ def visitors_view(request):
     return render(request, "visitors.html")
 
 @login_required
-def attendance_view(request):
-    return render(request, "attendance.html")
+def events_list(request):
+    # Events listing with search and ministry filters
+    events_qs = Event.objects.all().prefetch_related('schedules').order_by('event_name')
+
+    # Search by name
+    q = request.GET.get('q', '').strip()
+    if q:
+        events_qs = events_qs.filter(event_name__icontains=q)
+
+    # Ministry filter
+    selected_ministries = request.GET.getlist('ministry')
+    if selected_ministries and 'all' not in selected_ministries:
+        try:
+            mids = [int(x) for x in selected_ministries]
+        except ValueError:
+            mids = []
+        if mids:
+            events_qs = events_qs.filter(ministry__in=mids)
+
+    # Status filter (active/inactive)
+    status_filter = request.GET.get('status', '')
+    if status_filter == 'active':
+        events_qs = events_qs.filter(is_active=True)
+    elif status_filter == 'inactive':
+        events_qs = events_qs.filter(is_active=False)
+    
+    # Schedule type filters
+    schedule_types = request.GET.getlist('schedule_type')
+    if schedule_types:
+        from django.db.models import Q
+        schedule_filter = Q()
+        if 'one-time' in schedule_types:
+            schedule_filter |= Q(schedules__date__isnull=False)
+        if 'recurring' in schedule_types:
+            schedule_filter |= Q(schedules__weekday__isnull=False)
+        if schedule_filter:
+            events_qs = events_qs.filter(schedule_filter).distinct()
+    
+    # Weekday filter (for recurring events)
+    selected_weekdays = request.GET.getlist('weekday')
+    if selected_weekdays:
+        try:
+            weekday_ints = [int(x) for x in selected_weekdays]
+            events_qs = events_qs.filter(schedules__weekday__in=weekday_ints).distinct()
+        except ValueError:
+            pass
+    
+    # Date range filter (for one-time events)
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    if date_from:
+        events_qs = events_qs.filter(schedules__date__gte=date_from).distinct()
+    if date_to:
+        events_qs = events_qs.filter(schedules__date__lte=date_to).distinct()
+
+    # Gather filter data
+    ministries = Ministry.objects.all().order_by('ministry_name')
+    
+    # Process schedules for each event
+    from collections import defaultdict
+    events_with_schedules = []
+    for event in events_qs:
+        one_time_schedules = defaultdict(list)
+        recurring_schedules = defaultdict(list)
+        
+        for schedule in event.schedules.all():
+            time_str = schedule.open_time.strftime('%I:%M %p').lstrip('0')  # 12-hour format, remove leading zero
+            if schedule.date:
+                one_time_schedules[schedule.date].append(time_str)
+            elif schedule.weekday is not None:
+                weekday_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+                weekday_name = weekday_names[schedule.weekday]
+                recurring_schedules[weekday_name].append(time_str)
+        
+        # Sort times for each date/weekday
+        for date_key in one_time_schedules:
+            one_time_schedules[date_key].sort()
+        for weekday_key in recurring_schedules:
+            recurring_schedules[weekday_key].sort()
+        
+        event.one_time_schedules = sorted(one_time_schedules.items())
+        event.recurring_schedules = [(k, recurring_schedules[k]) for k in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] if k in recurring_schedules]
+        events_with_schedules.append(event)
+
+    context = {
+        'events': events_with_schedules,
+        'query': q,
+        'ministries': ministries,
+        'selected_ministries': selected_ministries,
+        'status_filter': status_filter,
+        'schedule_types': schedule_types,
+        'selected_weekdays': selected_weekdays,
+        'date_from': date_from,
+        'date_to': date_to,
+    }
+    return render(request, 'events.html', context)
+
+@login_required
+def event_create(request):
+    if request.method == 'POST':
+        event_name = request.POST.get('event_name', '').strip()
+        event_description = request.POST.get('event_description', '').strip()
+        ministry_id = request.POST.get('ministry')
+        is_active = request.POST.get('is_active') == 'on'
+        
+        if event_name:
+            event = Event.objects.create(
+                event_name=event_name,
+                event_description=event_description,
+                is_active=is_active
+            )
+            if ministry_id:
+                ministry = Ministry.objects.get(pk=ministry_id)
+                event.ministry = ministry
+                event.save()
+            
+            # Process schedules
+            from datetime import datetime, timedelta
+            schedule_index = 0
+            while f'schedule_type_{schedule_index}' in request.POST:
+                schedule_type = request.POST.get(f'schedule_type_{schedule_index}')
+                start_time_str = request.POST.get(f'schedule_start_time_{schedule_index}', '08:30')
+                duration_minutes = int(request.POST.get(f'schedule_duration_{schedule_index}', 90))
+                
+                # Parse start time and calculate close time
+                start_time = datetime.strptime(start_time_str, '%H:%M').time()
+                start_dt = datetime.combine(datetime.today(), start_time)
+                close_dt = start_dt + timedelta(minutes=duration_minutes)
+                close_time = close_dt.time()
+                
+                if schedule_type == 'one-time':
+                    schedule_date = request.POST.get(f'schedule_date_{schedule_index}')
+                    if schedule_date:
+                        EventSchedule.objects.create(
+                            event=event,
+                            date=schedule_date,
+                            weekday=None,
+                            open_time=start_time,
+                            close_time=close_time
+                        )
+                elif schedule_type == 'recurring':
+                    schedule_weekday = request.POST.get(f'schedule_weekday_{schedule_index}')
+                    if schedule_weekday:
+                        EventSchedule.objects.create(
+                            event=event,
+                            date=None,
+                            weekday=int(schedule_weekday),
+                            open_time=start_time,
+                            close_time=close_time
+                        )
+                
+                schedule_index += 1
+            
+            return redirect('events')
+    
+    # Get preselected ministry from URL parameter
+    preselected_ministry = request.GET.get('ministry', '')
+    ministries = Ministry.objects.all().order_by('ministry_name')
+    return render(request, 'event_form.html', {
+        'ministries': ministries,
+        'action': 'Create',
+        'preselected_ministry': preselected_ministry
+    })
+
+@login_required
+def event_edit(request, pk):
+    event = Event.objects.get(pk=pk)
+    if request.method == 'POST':
+        event.event_name = request.POST.get('event_name', '').strip()
+        event.event_description = request.POST.get('event_description', '').strip()
+        ministry_id = request.POST.get('ministry')
+        event.is_active = request.POST.get('is_active') == 'on'
+        
+        if ministry_id:
+            event.ministry = Ministry.objects.get(pk=ministry_id)
+        else:
+            event.ministry = None
+        event.save()
+        
+        # Delete existing schedules and recreate from form data
+        EventSchedule.objects.filter(event=event).delete()
+        
+        # Process schedules
+        from datetime import datetime, timedelta
+        schedule_index = 0
+        while f'schedule_type_{schedule_index}' in request.POST:
+            schedule_type = request.POST.get(f'schedule_type_{schedule_index}')
+            start_time_str = request.POST.get(f'schedule_start_time_{schedule_index}', '08:30')
+            duration_minutes = int(request.POST.get(f'schedule_duration_{schedule_index}', 90))
+            
+            # Parse start time and calculate close time
+            start_time = datetime.strptime(start_time_str, '%H:%M').time()
+            start_dt = datetime.combine(datetime.today(), start_time)
+            close_dt = start_dt + timedelta(minutes=duration_minutes)
+            close_time = close_dt.time()
+            
+            if schedule_type == 'one-time':
+                schedule_date = request.POST.get(f'schedule_date_{schedule_index}')
+                if schedule_date:
+                    EventSchedule.objects.create(
+                        event=event,
+                        date=schedule_date,
+                        weekday=None,
+                        open_time=start_time,
+                        close_time=close_time
+                    )
+            elif schedule_type == 'recurring':
+                schedule_weekday = request.POST.get(f'schedule_weekday_{schedule_index}')
+                if schedule_weekday:
+                    EventSchedule.objects.create(
+                        event=event,
+                        date=None,
+                        weekday=int(schedule_weekday),
+                        open_time=start_time,
+                        close_time=close_time
+                    )
+            
+            schedule_index += 1
+        
+        return redirect('events')
+    
+    ministries = Ministry.objects.all().order_by('ministry_name')
+    existing_schedules = EventSchedule.objects.filter(event=event).order_by('id')
+    return render(request, 'event_form.html', {
+        'event': event,
+        'ministries': ministries,
+        'action': 'Edit',
+        'existing_schedules': existing_schedules
+    })
+
+@login_required
+def event_delete(request, pk):
+    event = Event.objects.get(pk=pk)
+    if request.method == 'POST':
+        event.delete()
+        return redirect('events')
+    return render(request, 'event_confirm_delete.html', {'event': event})
 
 @login_required
 def analytics_view(request):
@@ -221,7 +458,7 @@ def ministry_create(request):
         form = MinistryForm(request.POST)
         if form.is_valid():
             form.save()
-            return redirect('ministries_list')
+            return redirect('ministries')
     else:
         form = MinistryForm()
     return render(request, 'ministry_form.html', {'form': form, 'action': 'Create'})
@@ -234,7 +471,7 @@ def ministry_edit(request, pk):
         form = MinistryForm(request.POST, instance=ministry)
         if form.is_valid():
             form.save()
-            return redirect('ministries_list')
+            return redirect('ministries')
     else:
         form = MinistryForm(instance=ministry)
     return render(request, 'ministry_form.html', {'form': form, 'action': 'Edit'})
@@ -245,15 +482,7 @@ def ministry_delete(request, pk):
     ministry = Ministry.objects.get(pk=pk)
     if request.method == 'POST':
         ministry.delete()
-        return redirect('ministries_list')
+        return redirect('ministries')
     return render(request, 'ministry_confirm_delete.html', {'ministry': ministry})
 
-
-@login_required
-def create_event(request, pk):
-    # Placeholder create-event view for a ministry. For now render a small form placeholder.
-    ministry = Ministry.objects.get(pk=pk)
-    if request.method == 'POST':
-        # Implement event creation logic later; redirect back to ministries
-        return redirect('ministries_list')
-    return render(request, 'create_event.html', {'ministry': ministry})
+# ---------- Event CRUD (user-facing) ----------

@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% block title %}Events{% endblock %}
+
+{% block content %}
+<style>
+  .collapse {
+    transition: none !important;
+  }
+  .collapsing {
+    transition: none !important;
+  }
+</style>
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Events</h1>
+    <a href="{% url 'event_create' %}" class="btn btn-primary">+ Add Event</a>
+  </div>
+
+  <form method="get" class="row g-3 mb-3">
+    <div class="col-md-12">
+      <div class="input-group">
+        <input type="search" name="q" class="form-control" placeholder="Search events by name" value="{{ query|default:'' }}">
+        <button class="btn btn-outline-secondary" type="submit">Search</button>
+        <a href="{% url 'events' %}" class="btn btn-outline-secondary">Reset</a>
+      </div>
+    </div>
+  </form>
+
+  <div class="row">
+    <div class="col-md-9">
+      {% if events %}
+        <div class="table-responsive">
+          <table class="table table-hover table-striped table-fixed">
+            <thead class="table-dark">
+              <tr>
+                <th style="width: 25%;">Event Name</th>
+                <th style="width: 20%;">Ministry</th>
+                <th style="width: 15%;">Status</th>
+                <th style="width: 40%;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for event in events %}
+                <tr>
+                  <td><strong>{{ event.event_name }}</strong></td>
+                  <td>{{ event.ministry.ministry_name|default:"—" }}</td>
+                  <td>
+                    {% if event.is_active %}
+                      <span class="badge bg-success">Active</span>
+                    {% else %}
+                      <span class="badge bg-secondary">Inactive</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <a href="{% url 'event_edit' event.pk %}" class="btn btn-sm btn-warning">Edit</a>
+                    <a href="{% url 'event_delete' event.pk %}" class="btn btn-sm btn-danger">Delete</a>
+                    <button class="btn btn-sm btn-outline-secondary toggle-details-{{ event.pk }}" type="button" data-bs-toggle="collapse" data-bs-target="#event-desc-{{ event.pk }}" aria-expanded="false" aria-controls="event-desc-{{ event.pk }}">Show Details</button>
+                  </td>
+                </tr>
+                <tr class="collapse" id="event-desc-{{ event.pk }}">
+                  <td colspan="4">
+                    <div class="p-3">
+                      <h6 class="mb-2"><strong>Description:</strong></h6>
+                      {% if event.event_description %}
+                        <p class="mb-3">{{ event.event_description }}</p>
+                      {% else %}
+                        <p class="text-muted mb-3">No description provided.</p>
+                      {% endif %}
+                      
+                      <h6 class="mb-2"><strong>Schedules:</strong></h6>
+                      {% if event.one_time_schedules or event.recurring_schedules %}
+                        <div class="row">
+                          {% if event.one_time_schedules %}
+                            <div class="col-md-6">
+                              <p class="mb-1 text-muted small"><strong>One-Time Events:</strong></p>
+                              <ul class="list-unstyled ps-3">
+                                {% for date, times in event.one_time_schedules %}
+                                  <li>{{ date|date:"M d, Y" }} - {{ times|join:", " }}</li>
+                                {% endfor %}
+                              </ul>
+                            </div>
+                          {% endif %}
+                          {% if event.recurring_schedules %}
+                            <div class="col-md-6">
+                              <p class="mb-1 text-muted small"><strong>Recurring Events:</strong></p>
+                              <ul class="list-unstyled ps-3">
+                                {% for weekday, times in event.recurring_schedules %}
+                                  <li>{{ weekday }} - {{ times|join:", " }}</li>
+                                {% endfor %}
+                              </ul>
+                            </div>
+                          {% endif %}
+                        </div>
+                      {% else %}
+                        <p class="text-muted">No schedules defined.</p>
+                      {% endif %}
+                    </div>
+                  </td>
+                </tr>
+                <script>
+                  (function(){
+                    var btn = document.querySelector('.toggle-details-{{ event.pk }}');
+                    var target = document.getElementById('event-desc-{{ event.pk }}');
+                    if (target && btn) {
+                      target.addEventListener('shown.bs.collapse', function(){ btn.textContent = 'Hide Details'; });
+                      target.addEventListener('hidden.bs.collapse', function(){ btn.textContent = 'Show Details'; });
+                    }
+                  })();
+                </script>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="alert alert-info">
+          <p>No events found. <a href="{% url 'event_create' %}">Create one now</a>.</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-header"><strong>Filters</strong></div>
+        <div class="card-body">
+          <form method="get">
+            {% if query %}
+              <input type="hidden" name="q" value="{{ query }}">
+            {% endif %}
+
+            <div class="mb-3">
+              <label class="form-label"><strong>Ministry</strong></label>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="ministry" value="all" id="ministry_all" {% if not selected_ministries or 'all' in selected_ministries %}checked{% endif %}>
+                <label class="form-check-label" for="ministry_all">All Ministries</label>
+              </div>
+              {% for m in ministries %}
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" name="ministry" value="{{ m.pk }}" id="ministry_{{ m.pk }}" {% if m.pk|stringformat:"s" in selected_ministries %}checked{% endif %}>
+                  <label class="form-check-label" for="ministry_{{ m.pk }}">{{ m.ministry_name }}</label>
+                </div>
+              {% endfor %}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label"><strong>Status</strong></label>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="status" value="" id="status_all" {% if not status_filter %}checked{% endif %}>
+                <label class="form-check-label" for="status_all">All</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="status" value="active" id="status_active" {% if status_filter == 'active' %}checked{% endif %}>
+                <label class="form-check-label" for="status_active">Active</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="status" value="inactive" id="status_inactive" {% if status_filter == 'inactive' %}checked{% endif %}>
+                <label class="form-check-label" for="status_inactive">Inactive</label>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label"><strong>Schedule Type</strong></label>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="schedule_type" value="one-time" id="schedule_onetime" {% if 'one-time' in schedule_types %}checked{% endif %}>
+                <label class="form-check-label" for="schedule_onetime">One-Time Events</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="schedule_type" value="recurring" id="schedule_recurring" {% if 'recurring' in schedule_types %}checked{% endif %}>
+                <label class="form-check-label" for="schedule_recurring">Recurring Events</label>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label"><strong>Weekdays (Recurring)</strong></label>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="weekday" value="0" id="weekday_0" {% if '0' in selected_weekdays %}checked{% endif %}>
+                <label class="form-check-label" for="weekday_0">Monday</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="weekday" value="1" id="weekday_1" {% if '1' in selected_weekdays %}checked{% endif %}>
+                <label class="form-check-label" for="weekday_1">Tuesday</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="weekday" value="2" id="weekday_2" {% if '2' in selected_weekdays %}checked{% endif %}>
+                <label class="form-check-label" for="weekday_2">Wednesday</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="weekday" value="3" id="weekday_3" {% if '3' in selected_weekdays %}checked{% endif %}>
+                <label class="form-check-label" for="weekday_3">Thursday</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="weekday" value="4" id="weekday_4" {% if '4' in selected_weekdays %}checked{% endif %}>
+                <label class="form-check-label" for="weekday_4">Friday</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="weekday" value="5" id="weekday_5" {% if '5' in selected_weekdays %}checked{% endif %}>
+                <label class="form-check-label" for="weekday_5">Saturday</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="weekday" value="6" id="weekday_6" {% if '6' in selected_weekdays %}checked{% endif %}>
+                <label class="form-check-label" for="weekday_6">Sunday</label>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label"><strong>Date Range (One-Time)</strong></label>
+              <div class="mb-2">
+                <label class="form-label small">From Date</label>
+                <input type="date" class="form-control" name="date_from" value="{{ date_from }}">
+              </div>
+              <div>
+                <label class="form-label small">To Date</label>
+                <input type="date" class="form-control" name="date_to" value="{{ date_to }}">
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

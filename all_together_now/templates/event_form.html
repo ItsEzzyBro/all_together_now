@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+{% block title %}{{ action }} Event{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="card">
+    <div class="card-header">
+      <h3>{{ action }} Event</h3>
+    </div>
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+        
+        <div class="mb-3">
+          <label for="event_name" class="form-label">Event Name <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="event_name" name="event_name" value="{{ event.event_name|default:'' }}" required>
+        </div>
+
+        <div class="mb-3">
+          <label for="event_description" class="form-label">Description</label>
+          <textarea class="form-control" id="event_description" name="event_description" rows="4">{{ event.event_description|default:'' }}</textarea>
+        </div>
+
+        <div class="mb-3">
+          <label for="ministry" class="form-label">Ministry</label>
+          <select class="form-select" id="ministry" name="ministry">
+            <option value="">No ministry</option>
+            {% for ministry in ministries %}
+              <option value="{{ ministry.pk }}" {% if preselected_ministry|stringformat:"s" == ministry.pk|stringformat:"s" or event.ministry.pk == ministry.pk %}selected{% endif %}>{{ ministry.ministry_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" {% if not event or event.is_active %}checked{% endif %}>
+            <label class="form-check-label" for="is_active">
+              Active
+            </label>
+          </div>
+        </div>
+
+        <hr class="my-4">
+
+        <h5>Event Schedules <span class="text-danger">*</span></h5>
+        <p class="text-muted small">Add at least one schedule for this event.</p>
+        
+        <div id="schedules-container">
+          {% if existing_schedules %}
+            {% for schedule in existing_schedules %}
+              <div class="card mb-3 schedule-item" data-schedule-index="{{ forloop.counter0 }}">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <strong>Schedule {{ forloop.counter }}</strong>
+                  <button type="button" class="btn btn-sm btn-danger remove-schedule" {% if forloop.first and existing_schedules|length == 1 %}style="display:none;"{% endif %}>Remove</button>
+                </div>
+                <div class="card-body">
+                  <div class="mb-3">
+                    <label class="form-label">Schedule Type</label>
+                    <select class="form-select schedule-type" name="schedule_type_{{ forloop.counter0 }}" required>
+                      <option value="">Select type...</option>
+                      <option value="one-time" {% if schedule.date %}selected{% endif %}>One-Time</option>
+                      <option value="recurring" {% if schedule.weekday is not None %}selected{% endif %}>Recurring</option>
+                    </select>
+                  </div>
+
+                  <div class="mb-3 one-time-field" {% if not schedule.date %}style="display:none;"{% endif %}>
+                    <label class="form-label">Date</label>
+                    <input type="date" class="form-control" name="schedule_date_{{ forloop.counter0 }}" value="{{ schedule.date|date:'Y-m-d' }}" {% if schedule.date %}required{% endif %}>
+                  </div>
+
+                  <div class="mb-3 recurring-field" {% if schedule.weekday is None %}style="display:none;"{% endif %}>
+                    <label class="form-label">Weekday</label>
+                    <select class="form-select" name="schedule_weekday_{{ forloop.counter0 }}" {% if schedule.weekday is not None %}required{% endif %}>
+                      <option value="">Select weekday...</option>
+                      <option value="0" {% if schedule.weekday == 0 %}selected{% endif %}>Monday</option>
+                      <option value="1" {% if schedule.weekday == 1 %}selected{% endif %}>Tuesday</option>
+                      <option value="2" {% if schedule.weekday == 2 %}selected{% endif %}>Wednesday</option>
+                      <option value="3" {% if schedule.weekday == 3 %}selected{% endif %}>Thursday</option>
+                      <option value="4" {% if schedule.weekday == 4 %}selected{% endif %}>Friday</option>
+                      <option value="5" {% if schedule.weekday == 5 %}selected{% endif %}>Saturday</option>
+                      <option value="6" {% if schedule.weekday == 6 %}selected{% endif %}>Sunday</option>
+                    </select>
+                  </div>
+
+                  <div class="time-fields" {% if not schedule.date and schedule.weekday is None %}style="display:none;"{% endif %}>
+                    <div class="row mb-3">
+                      <div class="col-md-6">
+                        <label class="form-label">Start Time</label>
+                        <input type="time" class="form-control" name="schedule_start_time_{{ forloop.counter0 }}" value="{{ schedule.open_time|date:'H:i'|default:'08:30' }}" required>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label">Duration (minutes)</label>
+                        <div class="input-group">
+                          <input type="number" class="form-control duration-input" name="schedule_duration_{{ forloop.counter0 }}" value="{% if schedule.open_time and schedule.close_time %}{{ schedule.duration_minutes }}{% else %}90{% endif %}" min="30" step="30" required>
+                          <span class="input-group-text duration-display" style="width: 110px; display: inline-block;">1 hr 30 min</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <!-- Schedule 1 (default for new events) -->
+            <div class="card mb-3 schedule-item" data-schedule-index="0">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <strong>Schedule 1</strong>
+                <button type="button" class="btn btn-sm btn-danger remove-schedule" style="display:none;">Remove</button>
+              </div>
+              <div class="card-body">
+                <div class="mb-3">
+                  <label class="form-label">Schedule Type</label>
+                  <select class="form-select schedule-type" name="schedule_type_0" required>
+                    <option value="">Select type...</option>
+                    <option value="one-time">One-Time</option>
+                    <option value="recurring">Recurring</option>
+                  </select>
+                </div>
+
+                <div class="mb-3 one-time-field" style="display:none;">
+                  <label class="form-label">Date</label>
+                  <input type="date" class="form-control" name="schedule_date_0">
+                </div>
+
+                <div class="mb-3 recurring-field" style="display:none;">
+                  <label class="form-label">Weekday</label>
+                  <select class="form-select" name="schedule_weekday_0">
+                    <option value="">Select weekday...</option>
+                    <option value="0">Monday</option>
+                    <option value="1">Tuesday</option>
+                    <option value="2">Wednesday</option>
+                    <option value="3">Thursday</option>
+                    <option value="4">Friday</option>
+                    <option value="5">Saturday</option>
+                    <option value="6">Sunday</option>
+                  </select>
+                </div>
+
+                <div class="time-fields" style="display:none;">
+                  <div class="row mb-3">
+                    <div class="col-md-6">
+                      <label class="form-label">Start Time</label>
+                      <input type="time" class="form-control" name="schedule_start_time_0" value="08:30" required>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">Duration (minutes)</label>
+                      <div class="input-group">
+                        <input type="number" class="form-control duration-input" name="schedule_duration_0" value="90" min="30" step="30" required>
+                        <span class="input-group-text duration-display" style="width: 110px; display: inline-block;">1 hr 30 min</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+
+        <button type="button" class="btn btn-outline-primary btn-sm mb-3" id="add-schedule-btn">+ Add Another Schedule</button>
+
+        <hr class="my-4">
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary">{{ action }} Event</button>
+          <a href="{% url 'events' %}" class="btn btn-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function(){
+    let scheduleCount = document.querySelectorAll('.schedule-item').length;
+
+    // Handle schedule type change
+    document.addEventListener('change', function(e) {
+      if (e.target.classList.contains('schedule-type')) {
+        const scheduleCard = e.target.closest('.schedule-item');
+        const oneTimeField = scheduleCard.querySelector('.one-time-field');
+        const recurringField = scheduleCard.querySelector('.recurring-field');
+        const timeFields = scheduleCard.querySelector('.time-fields');
+        const oneTimeInput = scheduleCard.querySelector('[name^="schedule_date_"]');
+        const recurringInput = scheduleCard.querySelector('[name^="schedule_weekday_"]');
+
+        if (e.target.value === 'one-time') {
+          oneTimeField.style.display = 'block';
+          recurringField.style.display = 'none';
+          timeFields.style.display = 'block';
+          oneTimeInput.required = true;
+          recurringInput.required = false;
+          recurringInput.value = '';
+        } else if (e.target.value === 'recurring') {
+          oneTimeField.style.display = 'none';
+          recurringField.style.display = 'block';
+          timeFields.style.display = 'block';
+          oneTimeInput.required = false;
+          recurringInput.required = true;
+          oneTimeInput.value = '';
+        } else {
+          oneTimeField.style.display = 'none';
+          recurringField.style.display = 'none';
+          timeFields.style.display = 'none';
+          oneTimeInput.required = false;
+          recurringInput.required = false;
+        }
+      }
+      
+      // Update duration display
+      if (e.target.classList.contains('duration-input')) {
+        updateDurationDisplay(e.target);
+      }
+    });
+    
+    // Function to update duration display
+    function updateDurationDisplay(input) {
+      const minutes = parseInt(input.value) || 0;
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      const display = input.closest('.input-group').querySelector('.duration-display');
+      
+      let text = '';
+      if (hours > 0) text += hours + ' hr ';
+      if (mins > 0) text += mins + ' min';
+      if (text === '') text = '0 min';
+      
+      display.textContent = text.trim();
+    }
+    
+    // Initialize all duration displays on page load
+    document.querySelectorAll('.duration-input').forEach(updateDurationDisplay);
+
+    // Add schedule
+    document.getElementById('add-schedule-btn').addEventListener('click', function() {
+      const container = document.getElementById('schedules-container');
+      const newIndex = scheduleCount;
+      scheduleCount++;
+
+      const scheduleHTML = `
+        <div class="card mb-3 schedule-item" data-schedule-index="${newIndex}">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>Schedule ${scheduleCount}</strong>
+            <button type="button" class="btn btn-sm btn-danger remove-schedule">Remove</button>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label">Schedule Type</label>
+              <select class="form-select schedule-type" name="schedule_type_${newIndex}" required>
+                <option value="">Select type...</option>
+                <option value="one-time">One-Time</option>
+                <option value="recurring">Recurring</option>
+              </select>
+            </div>
+
+            <div class="mb-3 one-time-field" style="display:none;">
+              <label class="form-label">Date</label>
+              <input type="date" class="form-control" name="schedule_date_${newIndex}">
+            </div>
+
+            <div class="mb-3 recurring-field" style="display:none;">
+              <label class="form-label">Weekday</label>
+              <select class="form-select" name="schedule_weekday_${newIndex}">
+                <option value="">Select weekday...</option>
+                <option value="0">Monday</option>
+                <option value="1">Tuesday</option>
+                <option value="2">Wednesday</option>
+                <option value="3">Thursday</option>
+                <option value="4">Friday</option>
+                <option value="5">Saturday</option>
+                <option value="6">Sunday</option>
+              </select>
+            </div>
+
+            <div class="time-fields" style="display:none;">
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <label class="form-label">Start Time</label>
+                  <input type="time" class="form-control" name="schedule_start_time_${newIndex}" value="08:30" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Duration (minutes)</label>
+                  <div class="input-group">
+                    <input type="number" class="form-control duration-input" name="schedule_duration_${newIndex}" value="90" min="30" step="30" required>
+                    <span class="input-group-text duration-display" style="width: 110px; display: inline-block;">1 hr 30 min</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      container.insertAdjacentHTML('beforeend', scheduleHTML);
+      updateRemoveButtons();
+    });
+
+    // Remove schedule
+    document.addEventListener('click', function(e) {
+      if (e.target.classList.contains('remove-schedule')) {
+        e.target.closest('.schedule-item').remove();
+        updateRemoveButtons();
+        renumberSchedules();
+      }
+    });
+
+    function updateRemoveButtons() {
+      const schedules = document.querySelectorAll('.schedule-item');
+      schedules.forEach((schedule, index) => {
+        const removeBtn = schedule.querySelector('.remove-schedule');
+        if (schedules.length > 1) {
+          removeBtn.style.display = 'inline-block';
+        } else {
+          removeBtn.style.display = 'none';
+        }
+      });
+    }
+
+    function renumberSchedules() {
+      const schedules = document.querySelectorAll('.schedule-item');
+      schedules.forEach((schedule, index) => {
+        const header = schedule.querySelector('.card-header strong');
+        header.textContent = `Schedule ${index + 1}`;
+      });
+    }
+  })();
+</script>
+
+{% endblock %}

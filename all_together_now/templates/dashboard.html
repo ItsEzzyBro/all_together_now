@@ -31,7 +31,7 @@
           <a class="btn btn-outline-primary w-100" href="{% url 'visitors' %}">View Visitors</a>
         </div>
         <div class="col-6 col-md-3">
-          <a class="btn btn-outline-primary w-100" href="{% url 'attendance' %}">Live Attendance</a>
+          <a class="btn btn-outline-primary w-100" href="{% url 'events' %}">Live Events</a>
         </div>
         <div class="col-6 col-md-3">
           <a class="btn btn-outline-primary w-100" href="{% url 'analytics' %}">Analytics</a>
@@ -41,14 +41,14 @@
           <a class="btn btn-primary w-100" href="{% url 'members_view' %}">My Members</a>
         </div>
         <div class="col-6 col-md-4">
-          <a class="btn btn-outline-primary w-100" href="{% url 'attendance' %}">Mark Attendance</a>
+          <a class="btn btn-outline-primary w-100" href="{% url 'events' %}">Mark Attendance</a>
         </div>
         <div class="col-6 col-md-4">
           <a class="btn btn-outline-primary w-100" href="{% url 'analytics' %}">My Analytics</a>
         </div>
       {% else %}
         <div class="col-12 col-md-6">
-          <a class="btn btn-primary w-100" href="{% url 'attendance' %}">Check-In</a>
+          <a class="btn btn-primary w-100" href="{% url 'events' %}">Check-In</a>
         </div>
         <div class="col-12 col-md-6">
           <a class="btn btn-outline-primary w-100" href="{% url 'connection_card' %}">Visitor Connection Card</a>
@@ -161,7 +161,7 @@
               <li class="list-group-item text-muted">No upcoming events.</li>
             {% endfor %}
           </ul>
-          <a href="{% url 'attendance' %}" class="btn btn-outline-primary btn-sm mt-3">Manage events / check-in</a>
+          <a href="{% url 'events' %}" class="btn btn-outline-primary btn-sm mt-3">Manage events / check-in</a>
         </div>
       </div>
     </div>

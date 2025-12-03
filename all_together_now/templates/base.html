@@ -85,19 +85,19 @@
                                 <li class="nav-item"><a class="nav-link" href="{% url 'members_view' %}">Members</a></li>
                                 <li class="nav-item"><a class="nav-link" href="{% url 'visitors' %}">Visitors</a></li>
                                 <li class="nav-item"><a class="nav-link" href="{% url 'ministries' %}">Ministries</a></li>
-                                <li class="nav-item"><a class="nav-link" href="{% url 'attendance' %}">Attendance</a></li>
+                                <li class="nav-item"><a class="nav-link" href="{% url 'events' %}">Events</a></li>
                                 <li class="nav-item"><a class="nav-link" href="{% url 'analytics' %}">Analytics</a></li>
                                 <li class="nav-item"><a class="nav-link" href="{% url 'system' %}">System</a></li>
                             {% elif role == 'Leader' or role == 'Ministry Leader' %}
                                 {# Ministry Leader menu (scoped access) #}
                                 <li class="nav-item"><a class="nav-link" href="{% url 'dashboard' %}">Dashboard</a></li>
                                 <li class="nav-item"><a class="nav-link" href="{% url 'members_view' %}">My Members</a></li>
-                                <li class="nav-item"><a class="nav-link" href="{% url 'attendance' %}">Attendance</a></li>
+                                <li class="nav-item"><a class="nav-link" href="{% url 'events' %}">Events</a></li>
                                 <li class="nav-item"><a class="nav-link" href="{% url 'analytics' %}">Analytics</a></li>
                             {% else %}
                                 {# Authenticated general member view (minimal) #}
                                 <li class="nav-item"><a class="nav-link" href="{% url 'dashboard' %}">Dashboard</a></li>
-                                <li class="nav-item"><a class="nav-link" href="{% url 'attendance' %}">Attendance</a></li>
+                                <li class="nav-item"><a class="nav-link" href="{% url 'events' %}">Events</a></li>
                             {% endif %}
                         {% endwith %}
                     {% endif %}

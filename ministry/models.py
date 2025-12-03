@@ -14,7 +14,7 @@ class Ministry(models.Model):
         verbose_name_plural = "Ministries"
 
     def __str__(self):
-        return self.name
+        return self.ministry_name
     
 class MembersAndMinistries(models.Model):
     member = models.ForeignKey(Member, on_delete = models.CASCADE)

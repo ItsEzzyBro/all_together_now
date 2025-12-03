@@ -14,7 +14,10 @@ urlpatterns = [
     path("members/", views.members_list, name="members_view"),
     path("visitors/", views.visitors_view, name="visitors"),
     path("ministries/", views.ministries_list, name="ministries"),
-    path("attendance/", views.attendance_view, name="attendance"),
+    path("events/", views.events_list, name="events"),
+    path("events/new/", views.event_create, name="event_create"),
+    path("events/<int:pk>/edit/", views.event_edit, name="event_edit"),
+    path("events/<int:pk>/delete/", views.event_delete, name="event_delete"),
     path("analytics/", views.analytics_view, name="analytics"),
     path("system/", views.system_view, name="system"),
 
@@ -31,5 +34,4 @@ urlpatterns = [
     path("ministries/new/", views.ministry_create, name="ministry_create"),
     path("ministries/<int:pk>/edit/", views.ministry_edit, name="ministry_edit"),
     path("ministries/<int:pk>/delete/", views.ministry_delete, name="ministry_delete"),
-    path("ministries/<int:pk>/create_event/", views.create_event, name="ministry_create_event"),
 ]

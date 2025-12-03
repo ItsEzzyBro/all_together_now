@@ -36,7 +36,9 @@
                 <a href="{% url 'ministry_delete' ministry.pk %}" class="btn btn-sm btn-danger">Delete</a>
                 <a href="{% url 'members_view' %}?bulk_action=add_to_ministry&ministry_id={{ ministry.pk }}" class="btn btn-sm btn-success">Add member</a>
                 <a href="{% url 'members_view' %}?bulk_action=remove_from_ministry&ministry_id={{ ministry.pk }}" class="btn btn-sm btn-danger">Remove members</a>
-                <a href="{% url 'ministry_create_event' ministry.pk %}" class="btn btn-sm btn-info">Create event</a>
+                <a href="{% url 'events' %}?ministry={{ ministry.pk }}" class="btn btn-sm btn-primary">View Events</a>
+                <a href="{% url 'event_create' %}?ministry={{ ministry.pk }}" class="btn btn-sm btn-info">Create Event</a>
+
               </td>
             </tr>
           {% endfor %}
