@@ -40,6 +40,7 @@ urlpatterns = [
     path("attendance/<int:event_id>/", views.attendance_form, name="attendance_form"),
     path("attendance/<int:event_id>/mark/", views.mark_attendance, name="mark_attendance"),
     path("events/<int:event_id>/qr_data/", views.event_qr_code_data, name="event_qr_code_data"),
+    path("connection_card/qr_data/", views.connection_card_qr_code_data, name="connection_card_qr_data"),
     
     # Users Management (staff-only)
     path("users/", views.users_list, name="users_list"),

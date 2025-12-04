@@ -1,40 +1,211 @@
 {% extends "base.html" %}
-{% block title %} Connection Card{% endblock %}
+{% block title %}Connection Card{% endblock %}
 {% block content %}
 <div class="container mt-4">
-  <h1 class="text-primary fw-bold mb-3"> Connection Card</h1>
-  <p class="lead">We’re glad you joined us! Please fill out this form so we can connect with you.</p>
+  <h1 class="text-primary fw-bold mb-2">Connection Card</h1>
+  <p class="text-muted">We’re glad you joined us! Please fill this out so we can connect.</p>
 
-  <form class="mt-4">
-    <div class="mb-3">
-      <label class="form-label">Full Name</label>
-      <input type="text" class="form-control" placeholder="Your name">
+  {# Intentionally do not show global messages here, success appears on redirect pages #}
+
+  {% if form.errors %}
+    <div class="alert alert-danger">
+      <strong>Please fix the errors below:</strong>
+      <ul class="mb-0">
+        {% for field, errors in form.errors.items %}
+          {% for error in errors %}
+            <li>{{ field|title }}: {{ error }}</li>
+          {% endfor %}
+        {% endfor %}
+      </ul>
     </div>
-    <div class="mb-3">
-      <label class="form-label">Email</label>
-      <input type="email" class="form-control" placeholder="your@email.com">
+  {% endif %}
+
+  <form method="POST" class="mt-3">
+    {% csrf_token %}
+    <div class="row g-3">
+      <div class="col-12 col-md-6">
+        <label class="form-label">First Name *</label>
+        {{ form.first_name }}
+      </div>
+      <div class="col-12 col-md-6">
+        <label class="form-label">Last Name *</label>
+        {{ form.last_name }}
+      </div>
+
+      <div class="col-12 col-md-6">
+        <label class="form-label">Phone Number <small class="text-muted">(optional)</small></label>
+        {{ form.phone_number }}
+      </div>
+      <div class="col-12 col-md-6">
+        <label class="form-label">Email <small class="text-muted">(optional)</small></label>
+        {{ form.email }}
+      </div>
+
+      <div class="col-12">
+        <label class="form-label">Address <small class="text-muted">(optional)</small></label>
+        {{ form.address }}
+      </div>
+
+      <div class="col-12">
+        <label class="form-label">Age Group <small class="text-muted">(optional)</small></label>
+        {% with sel=form.age_group.value %}
+        <div class="btn-group-vertical w-100" role="group">
+          <input type="radio" class="btn-check" name="age_group" id="age_under18" value="Under 18" autocomplete="off" {% if sel == 'Under 18' %}checked{% endif %}>
+          <label class="btn btn-outline-primary text-start py-3 fw-semibold border-2 fs-5 toggle-radio-clear" for="age_under18">Under 18</label>
+
+          <input type="radio" class="btn-check" name="age_group" id="age_18_24" value="18-24" autocomplete="off" {% if sel == '18-24' %}checked{% endif %}>
+          <label class="btn btn-outline-primary text-start py-3 fw-semibold border-2 fs-5 toggle-radio-clear" for="age_18_24">18-24</label>
+
+          <input type="radio" class="btn-check" name="age_group" id="age_25_34" value="25-34" autocomplete="off" {% if sel == '25-34' %}checked{% endif %}>
+          <label class="btn btn-outline-primary text-start py-3 fw-semibold border-2 fs-5 toggle-radio-clear" for="age_25_34">25-34</label>
+
+          <input type="radio" class="btn-check" name="age_group" id="age_35_44" value="35-44" autocomplete="off" {% if sel == '35-44' %}checked{% endif %}>
+          <label class="btn btn-outline-primary text-start py-3 fw-semibold border-2 fs-5 toggle-radio-clear" for="age_35_44">35-44</label>
+
+          <input type="radio" class="btn-check" name="age_group" id="age_45_54" value="45-54" autocomplete="off" {% if sel == '45-54' %}checked{% endif %}>
+          <label class="btn btn-outline-primary text-start py-3 fw-semibold border-2 fs-5 toggle-radio-clear" for="age_45_54">45-54</label>
+
+          <input type="radio" class="btn-check" name="age_group" id="age_55_64" value="55-64" autocomplete="off" {% if sel == '55-64' %}checked{% endif %}>
+          <label class="btn btn-outline-primary text-start py-3 fw-semibold border-2 fs-5 toggle-radio-clear" for="age_55_64">55-64</label>
+
+          <input type="radio" class="btn-check" name="age_group" id="age_65_plus" value="65+" autocomplete="off" {% if sel == '65+' %}checked{% endif %}>
+          <label class="btn btn-outline-primary text-start py-3 fw-semibold border-2 fs-5 toggle-radio-clear" for="age_65_plus">65+</label>
+        </div>
+        
+        {% endwith %}
+      </div>
+      <div class="col-12">
+        <label class="form-label">Marital Status <small class="text-muted">(optional)</small></label>
+        {% with sel=form.marital_status.value %}
+        <div class="btn-group-vertical w-100" role="group">
+          <input type="radio" class="btn-check" name="marital_status" id="marital_s" value="S" autocomplete="off" {% if sel == 'S' %}checked{% endif %}>
+          <label class="btn btn-outline-primary text-start py-3 fw-semibold border-2 fs-5 toggle-radio-clear" for="marital_s">Single</label>
+
+          <input type="radio" class="btn-check" name="marital_status" id="marital_m" value="M" autocomplete="off" {% if sel == 'M' %}checked{% endif %}>
+          <label class="btn btn-outline-primary text-start py-3 fw-semibold border-2 fs-5 toggle-radio-clear" for="marital_m">Married</label>
+
+          <input type="radio" class="btn-check" name="marital_status" id="marital_d" value="D" autocomplete="off" {% if sel == 'D' %}checked{% endif %}>
+          <label class="btn btn-outline-primary text-start py-3 fw-semibold border-2 fs-5 toggle-radio-clear" for="marital_d">Divorced</label>
+
+          <input type="radio" class="btn-check" name="marital_status" id="marital_w" value="W" autocomplete="off" {% if sel == 'W' %}checked{% endif %}>
+          <label class="btn btn-outline-primary text-start py-3 fw-semibold border-2 fs-5 toggle-radio-clear" for="marital_w">Widowed</label>
+        </div>
+        
+        {% endwith %}
+      </div>
+      <div class="col-12">
+        <label class="form-label">Gender <small class="text-muted">(optional)</small></label>
+        {% with sel=form.gender.value %}
+        <div class="btn-group-vertical w-100" role="group">
+          <input type="radio" class="btn-check" name="gender" id="gender_m" value="M" autocomplete="off" {% if sel == 'M' %}checked{% endif %}>
+          <label class="btn btn-outline-primary text-start py-3 fw-semibold border-2 fs-5 toggle-radio-clear" for="gender_m">Male</label>
+
+          <input type="radio" class="btn-check" name="gender" id="gender_f" value="F" autocomplete="off" {% if sel == 'F' %}checked{% endif %}>
+          <label class="btn btn-outline-primary text-start py-3 fw-semibold border-2 fs-5 toggle-radio-clear" for="gender_f">Female</label>
+        </div>
+        
+        {% endwith %}
+      </div>
+
+
+
+      <div class="col-12">
+        <label class="form-label">How did you hear about us? <small class="text-muted">(optional)</small></label>
+        <div class="btn-group-vertical w-100" role="group">
+          <input type="checkbox" class="btn-check" name="how_found" value="Social Media" id="how_social" autocomplete="off">
+          <label class="btn btn-outline-primary text-start py-3 fw-semibold border-2 fs-5" for="how_social">Social Media</label>
+
+          <input type="checkbox" class="btn-check" name="how_found" value="Friend" id="how_friend" autocomplete="off">
+          <label class="btn btn-outline-primary text-start py-3 fw-semibold border-2 fs-5" for="how_friend">Friend</label>
+
+          <input type="checkbox" class="btn-check" name="how_found" value="Website" id="how_website" autocomplete="off">
+          <label class="btn btn-outline-primary text-start py-3 fw-semibold border-2 fs-5" for="how_website">Website</label>
+
+          <input type="checkbox" class="btn-check" name="how_found" value="Drive-by" id="how_drive" autocomplete="off">
+          <label class="btn btn-outline-primary text-start py-3 fw-semibold border-2 fs-5" for="how_drive">Drive-by</label>
+
+          <input type="checkbox" class="btn-check" name="how_found" value="Event" id="how_event" autocomplete="off">
+          <label class="btn btn-outline-primary text-start py-3 fw-semibold border-2 fs-5" for="how_event">Event</label>
+        </div>
+      </div>
+
+
+      <div class="col-12">
+        <label class="form-label">Are there any ministries you are interested in? <small class="text-muted">(optional)</small></label>
+        <div class="btn-group-vertical w-100" role="group" id="ministry-buttons">
+          <!-- Ministry buttons will be populated by JS -->
+        </div>
+      </div>
+
+
+      <div class="col-12">
+        <label class="form-label">What is your history with Christ? <small class="text-muted">(optional)</small></label>
+        <div class="btn-group-vertical w-100" role="group">
+          <input type="checkbox" class="btn-check" name="dedicated_to_christ" id="hist_dedicated" autocomplete="off" {% if form.dedicated_to_christ.value %}checked{% endif %}>
+          <label class="btn btn-outline-primary text-start py-3 fw-semibold border-2 fs-5" for="hist_dedicated">I am dedicating my life to Christ for the first time.</label>
+
+          <input type="checkbox" class="btn-check" name="rededicated_to_christ" id="hist_rededicated" autocomplete="off" {% if form.rededicated_to_christ.value %}checked{% endif %}>
+          <label class="btn btn-outline-primary text-start py-3 fw-semibold border-2 fs-5" for="hist_rededicated">I am re-dedicating my life to Christ.</label>
+        </div>
+      </div>
+
+
+      <div class="col-12">
+        <label class="form-label">Contact <small class="text-muted">(optional)</small></label>
+        <div class="form-check">
+          {{ form.request_contact_by_leader }} <label class="form-check-label">I would like to be contacted by a leader.</label>
+        </div>
+      </div>
+
+      <div class="col-12">
+        <label class="form-label">Prayer Requests/Questions <small class="text-muted">(optional)</small></label>
+        {{ form.notes }}
+      </div>
+
+      <div class="col-12">
+        <button type="submit" class="btn btn-primary w-100">Submit</button>
+      </div>
     </div>
-    <div class="mb-3">
-      <label class="form-label">Phone Number</label>
-      <input type="tel" class="form-control" placeholder="(555) 555-5555">
-    </div>
-    <div class="mb-3">
-      <label class="form-label">Interested Ministry</label>
-      <select class="form-select">
-        <option selected>Choose one...</option>
-        <option>Worship</option>
-        <option>Outreach</option>
-        <option>Children's Ministry</option>
-        <option>Other</option>
-      </select>
-    </div>
-    <div class="form-check mb-3">
-      <input class="form-check-input" type="checkbox" id="consentCheck">
-      <label class="form-check-label" for="consentCheck">
-        I agree to have my information stored for follow-up.
-      </label>
-    </div>
-    <button type="submit" class="btn btn-primary">Submit</button>
   </form>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const ministryData = {{ ministries_json|safe }};
+  const ministryContainer = document.getElementById('ministry-buttons');
+
+  // Create button toggle for each ministry
+  ministryData.forEach(m => {
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.className = 'btn-check';
+    input.name = 'interested_ministries';
+    input.value = m.id;
+    input.id = `ministry_${m.id}`;
+    input.autocomplete = 'off';
+    
+    const label = document.createElement('label');
+    label.className = 'btn btn-outline-primary text-start py-3 fw-semibold border-2 fs-5';
+    label.setAttribute('for', `ministry_${m.id}`);
+    label.textContent = m.name;
+    
+    ministryContainer.appendChild(input);
+    ministryContainer.appendChild(label);
+  });
+
+    // (Removed) clear selection links
+
+    // Allow deselecting a selected radio by clicking the label again
+    document.querySelectorAll('label.toggle-radio-clear').forEach(lbl => {
+      lbl.addEventListener('click', function(e) {
+        const forId = this.getAttribute('for');
+        const input = document.getElementById(forId);
+        if (input && input.checked) {
+          e.preventDefault();
+          input.checked = false;
+        }
+      });
+    });
+});
+</script>
 {% endblock %}

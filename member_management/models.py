@@ -58,33 +58,58 @@ class Family(models.Model):
     
 
 class Vistor(models.Model):
-    first_name = models.CharField(max_length = 100)
-    last_name = models.CharField(max_length = 100)
-    date_of_birth = models.DateField(blank = False, null = True, verbose_name = "Date of Birth", help_text="Provide the member's date of birth (MM/DD/YYYY).")
-    GENDER = [
-        ("M", "Male"),
-        ("F", "Female")
+    # Required basics
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+
+    # Contact and address
+    phone_number = models.CharField(max_length=25, blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
+    address = models.TextField(blank=True, null=True)
+
+    # Demographics (optional)
+    AGE_GROUPS = [
+        ("Under 18", "Under 18"),
+        ("18-24", "18-24"),
+        ("25-34", "25-34"),
+        ("35-44", "35-44"),
+        ("45-54", "45-54"),
+        ("55-64", "55-64"),
+        ("65+", "65+"),
     ]
-    gender = models.CharField(max_length = 1, choices = GENDER, blank = True, null = True)
-    phone_number = models.CharField(max_length = 25, blank = True, null = True)
-    email = models.EmailField(unique = True, blank = True, null = True)
+    age_group = models.CharField(max_length=20, choices=AGE_GROUPS, blank=True, null=True)
 
-    def calculate_age(self):
-        today = date.today()
-        age_calculated = relativedelta(today, self.date_of_birth)
+    MARITAL_STATUS = [
+        ("S", "Single"),
+        ("M", "Married"),
+        ("D", "Divorced"),
+        ("W", "Widowed"),
+    ]
+    marital_status = models.CharField(max_length=1, choices=MARITAL_STATUS, blank=True, null=True)
 
-        return age_calculated.years
-    
-    @property
-    def age(self):
-        return self.calculate_age()
+    GENDER = [("M", "Male"), ("F", "Female")]
+    gender = models.CharField(max_length=1, choices=GENDER, blank=True, null=True)
+
+    # How they found out (multi-select via comma-separated values)
+    how_found = models.TextField(blank=True, null=True, help_text="Comma-separated list of sources (e.g., Social Media, Friend, Website)")
+
+    # Ministry interests
+    interested_ministries = models.ManyToManyField('ministry.Ministry', blank=True, related_name='interested_visitors')
+
+    # History / Contact checkboxes
+    dedicated_to_christ = models.BooleanField(default=False)
+    rededicated_to_christ = models.BooleanField(default=False)
+    request_contact_by_leader = models.BooleanField(default=False)
+
+    # Free response
+    notes = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
     
     class Meta:
-        verbose_name = "Vistor"
-        verbose_name_plural = "Vistors"
+        verbose_name = "Visitor"
+        verbose_name_plural = "Visitors"
 
 
 # ---- Accounts, Roles, and Access Control ----
