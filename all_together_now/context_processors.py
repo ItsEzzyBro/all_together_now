@@ -39,22 +39,27 @@ def user_role(request):
     """
     Makes the user's role (Admin, Leader, etc.) available in all templates as {{ user_role }}.
     Also provides {{ is_church_admin }} to check if user has Church Administrator role.
+    Auto-assigns Church Administrator role to superusers if not already assigned.
     """
     role = None
     is_church_admin = False
 
     # Only check if user is logged in
     if request.user.is_authenticated:
-        # Check if user has Church Administrator role
         from member_management.models import UsersAndRoles, Role
-        try:
-            church_admin_role = Role.objects.get(role_name="Church Administrator")
-            is_church_admin = UsersAndRoles.objects.filter(
-                user=request.user, 
-                role=church_admin_role
-            ).exists()
-        except Role.DoesNotExist:
-            pass
+        
+        # Ensure Church Administrator role exists
+        church_admin_role, _ = Role.objects.get_or_create(role_name="Church Administrator")
+        
+        # If user is superuser, auto-assign Church Administrator role
+        if request.user.is_superuser:
+            UsersAndRoles.objects.get_or_create(user=request.user, role=church_admin_role)
+        
+        # Check if user has Church Administrator role
+        is_church_admin = UsersAndRoles.objects.filter(
+            user=request.user, 
+            role=church_admin_role
+        ).exists()
         
         # Try to read a role directly from the user model
         role = getattr(request.user, "role", None)
