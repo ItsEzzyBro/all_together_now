@@ -29,7 +29,6 @@ A problem most small to medium size churches have is managing their church congr
   - Ministry leaders will be allowed to make their own password
   - Depending on the ministry/role/job, they will have access to/view certain information
   - They will be able to edit the members and their information within their ministry/group
-  - Two-Step Verification for extra security
 - **Create visitor connection cards and send/forward them to the appropriate ministry leader(s)**
   - QR Code and Form Usage
 
@@ -47,4 +46,4 @@ A problem most small to medium size churches have is managing their church congr
 
 ## 🖥️ Technology Stack
 
-The Technology stack we will be using to implement the project components above is PostgreSQL for the database to store and organize member and visitor information, Django for the backend to communicate and retrieve the information from the database to display to the user, Django templates for the frontend to display and visualize the information from the database in a user-friendly and visually appealing way. We will also be using the Google Cloud Platform as the Cloud Platform to make this project live in the cloud.
+The Technology stack we will be using to implement the project components above is a PostgreSQL database through Google Cloud SQL for the database to store and organize member and visitor information, Django for the backend to communicate and retrieve the information from the database to display to the user, and Django templates with Bootstrap for the frontend to display and visualize the information from the database in a user-friendly and visually appealing way. We will also be using the Google Cloud Platform as the Cloud Platform to make this project live in the cloud.
