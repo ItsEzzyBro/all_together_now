@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Member, Family, Vistor, Role, UsersAndRoles, RolesAndMinistries, UserProfile
+from .models import Member, Family, Vistor, Role, UsersAndRoles, RolesAndMinistries
 
 # Register your models here.
 class MemberAdmin(admin.ModelAdmin):
@@ -46,8 +46,3 @@ class UsersAndRolesAdmin(admin.ModelAdmin):
     list_display = ("user", "role")
     list_filter = ("role",)
     search_fields = ("user__username", "role__role_name")
-
-@admin.register(UserProfile)
-class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ("user", "member")
-    search_fields = ("user__username", "member__first_name", "member__last_name")

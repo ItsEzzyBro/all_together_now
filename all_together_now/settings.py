@@ -13,8 +13,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import os
 import io
-import environ  # New Import
-import google
+import environ
+import google.auth
 from google.cloud import secretmanager
 
 

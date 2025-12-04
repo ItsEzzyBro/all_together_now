@@ -148,15 +148,3 @@ class UsersAndRoles(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user.username} -> {self.role.role_name}"
-
-
-class UserProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
-    member = models.ForeignKey('Member', on_delete=models.SET_NULL, null=True, blank=True, unique=True)
-
-    class Meta:
-        verbose_name = "User Profile"
-        verbose_name_plural = "User Profiles"
-
-    def __str__(self) -> str:
-        return f"Profile for {self.user.username}"

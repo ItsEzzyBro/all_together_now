@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
 from django.db.models import Case, When, Value, IntegerField
-from .models import UserProfile, Role, UsersAndRoles, RolesAndMinistries
+from .models import Role, UsersAndRoles, RolesAndMinistries
 
 class UserCreateForm(forms.ModelForm):
     """Form for creating a new user with password and member association"""

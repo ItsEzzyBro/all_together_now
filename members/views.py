@@ -963,7 +963,7 @@ def connection_card_qr_code_data(request):
 def users_list(request):
     """Users list with search, filters, and bulk actions"""
     from django.contrib.auth.models import User
-    from member_management.models import UserProfile, Role, UsersAndRoles, RolesAndMinistries
+    from member_management.models import Role, UsersAndRoles, RolesAndMinistries
     
     # Bulk actions
     if request.method == 'POST':
@@ -994,17 +994,12 @@ def users_list(request):
                 return redirect(reverse('users_list') + f'?bulk_action=remove_role&role_id={role_id}')
 
     # Queryset
-    qs = User.objects.select_related('profile').prefetch_related('user_roles__role').order_by('username')
+    qs = User.objects.prefetch_related('user_roles__role').order_by('username')
 
     # Search
     q = request.GET.get('q', '').strip()
     if q:
-        qs = qs.filter(
-            Q(username__icontains=q) |
-            Q(profile__member__first_name__icontains=q) |
-            Q(profile__member__last_name__icontains=q) |
-            Q(profile__member__email__icontains=q)
-        )
+        qs = qs.filter(Q(username__icontains=q))
 
     # Ministry filter (based on roles' ministry access)
     selected_ministries = request.GET.getlist('ministry')
