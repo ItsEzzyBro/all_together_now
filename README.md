@@ -29,7 +29,6 @@ A problem most small to medium size churches have is managing their church congr
   - Ministry leaders will be allowed to make their own password
   - Depending on the ministry/role/job, they will have access to/view certain information
   - They will be able to edit the members and their information within their ministry/group
-  - Two-Step Verification for extra security
 - **Create visitor connection cards and send/forward them to the appropriate ministry leader(s)**
   - QR Code and Form Usage
 
