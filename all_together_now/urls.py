@@ -35,9 +35,12 @@ urlpatterns = [
 
     path("admin-dashboard/", admin.site.urls),
     path("", include("members.urls")),
-    path("accounts/login/", auth_views.LoginView.as_view(template_name = 'admin/login.html'), name = 'login'),
-    path("accounts/logout/", auth_views.LogoutView.as_view(), name = 'logout'),
+    path("login/", auth_views.LoginView.as_view(
+        template_name="login.html",
+        redirect_authenticated_user=True
+    ), name="login"),
 
+    path("logout/", auth_views.LogoutView.as_view(), name="logout"),
     #path("admin/", admin.site.urls),
     #path("", include("members.urls")),
 ]
