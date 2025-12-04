@@ -2,11 +2,204 @@
 {% block title %}Visitors{% endblock %}
 {% block content %}
 <div class="container mt-4">
-  <h1 class="text-primary fw-bold mb-3">Visitors Overview</h1>
-  <p class="lead">View and manage visitor connection card submissions and follow-up records.</p>
-
-  <div class="alert alert-info mt-4">
-    <strong>Coming soon:</strong> Visitor table with contact preferences, interests, and follow-up status.
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h1 class="text-primary fw-bold mb-0">Visitors</h1>
+    <div class="d-flex gap-2">
+      <a href="{% url 'connection_card' %}" class="btn btn-primary">Open Connection Card</a>
+      <button type="button" class="btn btn-primary" onclick="openConnCardQr()" title="Print Connection Card QR Code">
+        Print Connection Card QR Code
+      </button>
+    </div>
   </div>
+
+  <form method="get" class="row g-2 mb-3">
+    <div class="col-12 col-md-6">
+      <label class="form-label">Filter by Ministry</label>
+      <select class="form-select" name="ministry">
+        <option value="0" {% if not selected_ministry %}selected{% endif %}>All</option>
+        {% for m in ministries %}
+          <option value="{{ m.id }}" {% if selected_ministry == m.id %}selected{% endif %}>{{ m.ministry_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label">Contact Request</label>
+      <select class="form-select" name="contact">
+        <option value="" {% if not contact_filter %}selected{% endif %}>All</option>
+        <option value="yes" {% if contact_filter == 'yes' %}selected{% endif %}>Requested</option>
+        <option value="no" {% if contact_filter == 'no' %}selected{% endif %}>Not Requested</option>
+      </select>
+    </div>
+    <div class="col-12 col-md-2 align-self-end">
+      <button type="submit" class="btn btn-primary w-100">Apply Filter</button>
+    </div>
+  </form>
+
+  {% if grouped_visitors %}
+    {% for ministry_name, visitors in grouped_visitors.items %}
+      <div class="card mb-4">
+        <div class="card-header bg-light">
+          <strong>{{ ministry_name }}</strong>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Phone</th>
+                  <th>Interested Ministries</th>
+                  <th>Contact Request</th>
+                  <th>Prayer Requests/Questions</th>
+                  <th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for v in visitors %}
+                <tr>
+                  <td>{{ v.first_name }} {{ v.last_name }}</td>
+                  <td>{{ v.phone_number|default:'—' }}</td>
+                  <td>
+                    {% for im in v.interested_ministries.all %}
+                      <span class="badge text-bg-secondary me-1">{{ im.ministry_name }}</span>
+                    {% empty %}
+                      <span class="text-muted">—</span>
+                    {% endfor %}
+                  </td>
+                  <td>{% if v.request_contact_by_leader %}Yes{% else %}No{% endif %}</td>
+                  <td class="text-truncate" style="max-width: 280px;">
+                    {{ v.notes|default:'—' }}
+                  </td>
+                  <td class="text-end">
+                    <button class="btn btn-sm btn-outline-secondary toggle-visitor-details" data-visitor-id="{{ v.id }}">Show Details</button>
+                  </td>
+                </tr>
+                <tr id="visitor-details-{{ v.id }}" class="visitor-details-row" style="display: none;">
+                  <td colspan="6" style="background-color: #f8f9fa; padding: 15px;">
+                    <div class="row g-3">
+                      <div class="col-md-6">
+                        <p class="mb-2"><strong>Email:</strong> {{ v.email|default:'—' }}</p>
+                        <p class="mb-2"><strong>Phone:</strong> {{ v.phone_number|default:'—' }}</p>
+                        <p class="mb-2"><strong>Address:</strong> {{ v.address|default:'—' }}</p>
+                        <p class="mb-2"><strong>Age Group:</strong> {{ v.age_group|default:'—' }}</p>
+                      </div>
+                      <div class="col-md-6">
+                        <p class="mb-2"><strong>Gender:</strong> {{ v.get_gender_display|default:'—' }}</p>
+                        <p class="mb-2"><strong>Marital Status:</strong> {{ v.get_marital_status_display|default:'—' }}</p>
+                        <p class="mb-2"><strong>Find Method:</strong> {{ v.how_found|default:'—' }}</p>
+                        <p class="mb-2"><strong>History:</strong>
+                          {% if v.dedicated_to_christ %}<span class="badge text-bg-success">First time dedication</span>{% endif %}
+                          {% if v.rededicated_to_christ %}<span class="badge text-bg-info">Re-dedication</span>{% endif %}
+                          {% if not v.dedicated_to_christ and not v.rededicated_to_christ %}—{% endif %}
+                        </p>
+                      </div>
+                      <div class="col-12">
+                        <hr class="my-2">
+                        <p class="mb-1"><strong>Prayer Requests/Questions:</strong></p>
+                        <p class="text-muted">{{ v.notes|linebreaksbr|default:'—' }}</p>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="alert alert-light border">No visitors found for the selected filter.</div>
+  {% endif %}
 </div>
+
+<!-- QR Print Overlay for Connection Card -->
+<div id="qrPrintOverlay" style="display:none; position:fixed; inset:0; background:#fff; z-index:1050; height:100vh; overflow:hidden;">
+  <div class="qr-page" style="display:grid; place-items:center; height:100%;">
+    <div style="text-align:center; max-width:600px; width:100%; padding:0; box-sizing:border-box; margin:0 auto;">
+      <div style="font-size:22px; color:#666; font-weight:600; margin-bottom:10px;" id="qrOverlayTitle"></div>
+      <img id="qrOverlayImage" alt="QR Code" style="max-width:400px; width:100%; height:auto; margin:0 auto;" />
+      <div style="margin-top:8px; font-size:16px; color:#555; font-weight:500;">Scan this QR code to open the Connection Card</div>
+      <button type="button" class="btn btn-secondary mt-3 no-print" onclick="closeQrPrint()">Close</button>
+    </div>
+  </div>
+  </div>
+
+<style>
+  @page { 
+    size: A4 portrait; 
+    margin: 0;
+  }
+  @media print {
+    html, body { 
+      height: 100vh !important;
+      max-height: 100vh !important;
+      overflow: hidden !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    body * { visibility: hidden; }
+    #qrPrintOverlay, #qrPrintOverlay * { visibility: visible; }
+    #qrPrintOverlay { 
+      position: fixed !important;
+      inset: 0 !important;
+      background: #fff;
+      height: 100vh !important;
+      max-height: 100vh !important;
+      overflow: hidden !important;
+    }
+    #qrPrintOverlay .qr-page { 
+      page-break-before: avoid !important;
+      page-break-after: avoid !important;
+      page-break-inside: avoid !important;
+      break-before: avoid !important;
+      break-after: avoid !important;
+      break-inside: avoid !important;
+      height: 100vh !important;
+      max-height: 100vh !important;
+    }
+    body { display: grid; place-items: center; background:#fff; }
+    .no-print { display: none !important; }
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.toggle-visitor-details').forEach(button => {
+      button.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const visitorId = this.getAttribute('data-visitor-id');
+        const detailsRow = document.getElementById('visitor-details-' + visitorId);
+        
+        if (detailsRow.style.display === 'none') {
+          detailsRow.style.display = 'table-row';
+          this.textContent = 'Hide Details';
+        } else {
+          detailsRow.style.display = 'none';
+          this.textContent = 'Show Details';
+        }
+      });
+    });
+  });
+
+  // QR Print functions for Connection Card
+  async function openConnCardQr() {
+    try {
+      const resp = await fetch("{% url 'connection_card_qr_data' %}");
+      if (!resp.ok) { throw new Error('Failed to load QR data'); }
+      const data = await resp.json();
+      document.getElementById('qrOverlayTitle').textContent = data.title || 'Visitor Connection Card';
+      document.getElementById('qrOverlayImage').src = 'data:image/png;base64,' + data.qr_code;
+      const overlay = document.getElementById('qrPrintOverlay');
+      overlay.style.display = 'block';
+      setTimeout(() => { window.print(); }, 100);
+    } catch (e) {
+      alert('Could not generate QR code: ' + e.message);
+    }
+  }
+
+  function closeQrPrint() {
+    document.getElementById('qrPrintOverlay').style.display = 'none';
+  }
+</script>
 {% endblock %}
