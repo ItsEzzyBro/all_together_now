@@ -30,7 +30,40 @@ def contact(request):
     return render(request, "contact.html")
 
 def connection_card(request):
-    return render(request, "connection_card.html")
+    from member_management.forms import VistorForm
+    if request.method == 'POST':
+        form = VistorForm(request.POST)
+        if form.is_valid():
+            visitor = form.save()
+            # Get ministry IDs from multiple selects
+            ministry_ids = request.POST.getlist('interested_ministries')
+            ministry_ids = [int(m) for m in ministry_ids if m]  # Filter empty values
+            if ministry_ids:
+                visitor.interested_ministries.set(ministry_ids)
+            
+            # Get how_found checkboxes and store as comma-separated
+            how_found_values = request.POST.getlist('how_found')
+            if how_found_values:
+                visitor.how_found = ", ".join(how_found_values)
+                visitor.save()
+            
+            messages.success(request, "Thanks! Your connection card was received.")
+            # If authenticated, return to Visitors; otherwise go home
+            if request.user.is_authenticated:
+                return redirect('visitors')
+            else:
+                return redirect('home')
+    else:
+        form = VistorForm()
+    
+    # Pass ministries as JSON for JS
+    ministries = Ministry.objects.all().order_by('ministry_name')
+    ministries_json = json.dumps([{'id': m.id, 'name': m.ministry_name} for m in ministries])
+    
+    return render(request, "connection_card.html", {
+        "form": form,
+        "ministries_json": ministries_json
+    })
 
 # ---------- Auth-required pages ----------
 @login_required
@@ -39,7 +72,55 @@ def dashboard(request):
 
 @login_required
 def visitors_view(request):
-    return render(request, "visitors.html")
+    # Determine ministries user can see
+    accessible_ministries = get_user_accessible_ministries(request.user)
+    accessible_ids = set(accessible_ministries.values_list('id', flat=True))
+
+    # Optional filter by specific ministry
+    try:
+        filter_ministry_id = int(request.GET.get('ministry', '0'))
+    except ValueError:
+        filter_ministry_id = 0
+    contact_filter = request.GET.get('contact', '')  # '', 'yes', 'no'
+
+    visitors_qs = Vistor.objects.prefetch_related('interested_ministries').order_by('first_name', 'last_name')
+
+    # Include visitors with no ministries selected, plus those matching user's accessible ministries
+    if accessible_ids:
+        from django.db.models import Q
+        visitors_qs = visitors_qs.filter(
+            Q(interested_ministries__in=list(accessible_ids)) | Q(interested_ministries__isnull=True)
+        ).distinct()
+
+    # If a specific ministry filter is applied, narrow down
+    if filter_ministry_id:
+        visitors_qs = visitors_qs.filter(interested_ministries__id=filter_ministry_id)
+
+    # Contact request filter
+    if contact_filter == 'yes':
+        visitors_qs = visitors_qs.filter(request_contact_by_leader=True)
+    elif contact_filter == 'no':
+        visitors_qs = visitors_qs.filter(Q(request_contact_by_leader=False) | Q(request_contact_by_leader__isnull=True))
+
+    # Group visitors by ministry name
+    from collections import defaultdict
+    grouped = defaultdict(list)
+    for v in visitors_qs:
+        ims = list(v.interested_ministries.all())
+        if not ims:
+            grouped['(No Ministry Selected)'].append(v)
+        else:
+            for m in ims:
+                grouped[m.ministry_name].append(v)
+
+    ministries = Ministry.objects.all().order_by('ministry_name')
+    context = {
+        'grouped_visitors': dict(grouped),
+        'ministries': ministries,
+        'selected_ministry': filter_ministry_id,
+        'contact_filter': contact_filter,
+    }
+    return render(request, "visitors.html", context)
 
 @login_required
 def events_list(request):
@@ -847,12 +928,42 @@ def event_qr_code_data(request, event_id):
     })
 
 
+@login_required
+def connection_card_qr_code_data(request):
+    """Return QR code for the public connection card URL as base64 PNG via JSON."""
+    import qrcode
+    import base64
+    from io import BytesIO
+
+    card_url = request.build_absolute_uri(reverse('connection_card'))
+
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(card_url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    buffer = BytesIO()
+    img.save(buffer, format='PNG')
+    buffer.seek(0)
+    qr_code_base64 = base64.b64encode(buffer.getvalue()).decode()
+
+    return JsonResponse({
+        'title': 'Visitor Connection Card',
+        'qr_code': qr_code_base64,
+        'url': card_url,
+    })
+
+
 # ---------- Users Management (staff-only) ----------
 @login_required
 def users_list(request):
     """Users list with search, filters, and bulk actions"""
     from django.contrib.auth.models import User
-    from member_management.models import UserProfile, Role, UsersAndRoles, RolesAndMinistries
+    from member_management.models import Role, UsersAndRoles, RolesAndMinistries
     
     # Bulk actions
     if request.method == 'POST':
@@ -883,17 +994,12 @@ def users_list(request):
                 return redirect(reverse('users_list') + f'?bulk_action=remove_role&role_id={role_id}')
 
     # Queryset
-    qs = User.objects.select_related('profile').prefetch_related('user_roles__role').order_by('username')
+    qs = User.objects.prefetch_related('user_roles__role').order_by('username')
 
     # Search
     q = request.GET.get('q', '').strip()
     if q:
-        qs = qs.filter(
-            Q(username__icontains=q) |
-            Q(profile__member__first_name__icontains=q) |
-            Q(profile__member__last_name__icontains=q) |
-            Q(profile__member__email__icontains=q)
-        )
+        qs = qs.filter(Q(username__icontains=q))
 
     # Ministry filter (based on roles' ministry access)
     selected_ministries = request.GET.getlist('ministry')
